@@ -5,11 +5,12 @@
  * Created on February 26, 2019, 12:16 PM
  */
 
-#include <cstdlib>
+#include <stdlib.h>
 #include <iostream>
 #include <fstream>
 #include <ctime>
 #include <cmath>
+#include <string>
 #define SZE 170
 #define RND 18
 #define SPI 3 
@@ -80,11 +81,18 @@ struct oDist {
     oClass Class;
     int Distance;
 };
+
+struct oFile {
+    int nSamples;
+    int nFeatures;
+    int nInstances;
+};
+
 // Prototypes
-int count_rows();
+oFile count_samples();
 void read_data(oSample *samplesVector);
 void show_data(oSample *sVector, int size);
-void select_random(oSample *sVector, oSample *rSamples, oSample *reSamples);
+void select_random(oSample *sVector, oSample *rSamples, bool *rSelected);
 void show_random(oSample *rSelected);
 void calculate_K(oSample *sVector, oSample *rSamples);
 void toArray(oSample iSample, int *sVector);
@@ -97,37 +105,57 @@ int getCount(int min, int max);
 // Variables
 
 int main(int argc, char** argv) {
-    int SIZE = count_rows();
-    cout << "Total rows:\t" << SIZE << endl;
+    oFile File;
+    File = count_samples();
+    int SIZE = File.nSamples;
+    int FEATURES = File.nFeatures;
+    cout << "Total Samples:\t" << SIZE << endl;
+    cout << "Total Features:\t" << FEATURES << endl;
     int RANDOM = SIZE * 0.10;
     cout << "Random Samples:\t" << RANDOM << endl;
-    oSample Dataset[SIZE], randomSamples[RND], rDataset[(SZE - RND)], Train, Test;
+
+    oSample Dataset[SZE], randomSamples[RND], rDataset[(SZE - RND)];
+    oSample Train, Test;
     oSampleK kRandomSamples[RND];
+    bool rSelected[SZE] = {};
 
     read_data(Dataset);
     //Show_data(Dataset);
-    select_random(Dataset, randomSamples, rDataset);
+    select_random(Dataset, randomSamples, rSelected);
     //Show_random(randomSamples);
     calculate_K(rDataset, randomSamples);
     return 0;
 }
 
-int count_rows() {
+oFile count_samples() {
+    oFile outFile;
     ifstream file("Data Files/Samples_.txt");
-    int count = 0;
     string line;
-    
+    int count = 0;
+    int features = 0;
+    bool flag = false;
     while (getline(file, line)) {
+        if (!flag) {
+            for (char c : line) {
+                if (c == ' ') {
+                    features++;
+                }
+            }
+            flag = true;
+        }
         count++;
     }
-    return (count-1);
+
+    outFile.nSamples = count;
+    outFile.nFeatures = features + 1;
+    return outFile;
 }
 
 void read_data(oSample *samplesVector) {
     double radio, ratio, white, black, green, boutg;
     int type;
     oSample input;
-    int indx = 0;
+    int index = 0;
     ifstream file;
 
     file.open("Data Files/Samples_.txt", ios::in);
@@ -172,21 +200,21 @@ void read_data(oSample *samplesVector) {
                     input.Class = oBall6;
                     break;
             }
-            samplesVector[indx] = input;
-            indx++;
+            samplesVector[index] = input;
+            index++;
 
         }
         file.close();
-        show_data(samplesVector, SZE);
+        show_data(samplesVector, (index - 1));
         cout << endl;
     } else {
         cout << "Something wrong!..." << endl;
     }
 }
 
-void show_data(oSample *samplesVector, int size) {
+void show_data(oSample *samplesVector, int Size) {
     cout << "                ---------- Dataset ----------" << endl;
-    for (int i = 0; i < size; i++) {
+    for (int i = 0; i < Size; i++) {
         cout << "[" << i << "] \t" <<
                 samplesVector[i].Features.Radio << "\t" <<
                 samplesVector[i].Features.Ratio << "\t" <<
@@ -199,9 +227,8 @@ void show_data(oSample *samplesVector, int size) {
     cout << endl;
 }
 
-void select_random(oSample *sVector, oSample *rSamples, oSample *reSamples) {
+void select_random(oSample *sVector, oSample *rSamples, bool *rSelected) {
     oSample randomSelected;
-    bool selected[SZE] = {};
     //    srand((int)time(0));
     int index;
     int count = 0;
@@ -210,11 +237,11 @@ void select_random(oSample *sVector, oSample *rSamples, oSample *reSamples) {
         instances = 0;
         while (instances < SPI) { // SPI = 3
             index = rand() % 170; // 0 >= index < 170
-            if (!selected[index]) {
+            if (!rSelected[index]) {
                 randomSelected = sVector[index];
                 if (randomSelected.Class == oClass) {
                     rSamples[count] = randomSelected;
-                    selected[index] = true;
+                    rSelected[index] = true;
                     instances++;
                     count++;
                 }
@@ -222,14 +249,6 @@ void select_random(oSample *sVector, oSample *rSamples, oSample *reSamples) {
         }
     }
     show_random(rSamples);
-    count = 0;
-    for (int i = 0; i < SZE; i++) {
-        if (!selected[i]) {
-            reSamples[count] = sVector[i];
-            count++;
-        }
-    }
-    show_data(reSamples, SZE - RND);
     cout << endl;
 }
 
@@ -358,7 +377,7 @@ int select_k(oDist *vDistances, oClass cSample) {
                 " Correct:\t" << correct <<
                 " Success:\t" << success <<
                 " Accuracy:\t" << cAccuracy <<
-                " Tolerance:\t" << ((float)correct-1)/K << endl;
+                " Tolerance:\t" << ((float) correct - 1) / K << endl;
         count++;
         K += 2;
     }

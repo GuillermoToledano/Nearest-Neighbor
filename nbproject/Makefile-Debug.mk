@@ -65,7 +65,7 @@ ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/nearest_neighbor.exe: ${OBJECTFILES}
 ${OBJECTDIR}/NearestNeighbor.o: NearestNeighbor.cpp
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/NearestNeighbor.o NearestNeighbor.cpp
+	$(COMPILE.cc) -g -std=c++14 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/NearestNeighbor.o NearestNeighbor.cpp
 
 # Subprojects
 .build-subprojects:
