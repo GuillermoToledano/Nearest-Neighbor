@@ -3,3 +3,5 @@
 /dist/Debug/Cygwin-Windows/nearest_neighbor.exe
 /nbproject/project.xml
 /nbproject/private/private.xml
+*.exe
+*.stackdump
