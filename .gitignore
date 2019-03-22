@@ -4,6 +4,13 @@
 /nbproject/project.xml
 /nbproject/private/private.xml
 
+# NetBeans Dirs
+build/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
+
 # Prerequisites
 *.d
 
