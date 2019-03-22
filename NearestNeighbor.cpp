@@ -67,12 +67,16 @@ struct oSample {
     oClass Class;
 };
 
+struct oRSample {
+    oSample Sample;
+    int Index;
+};
 /** 
  * Object Sample K
  * @Sample From oSample struct
  * @K Assigned K value 
  */
-struct oSampleK {
+struct oKSample {
     oSample Sample;
     int K;
 };
@@ -92,13 +96,13 @@ struct oFile {
 oFile count_samples();
 void read_data(oSample *samplesVector);
 void show_data(oSample *sVector, int size);
-void select_random(oSample *sVector, oSample *rSamples, bool *rSelected);
-void show_random(oSample *rSelected);
-void calculate_K(oSample *sVector, oSample *rSamples);
+void select_random(oSample *sVector, oRSample *rSamples);
+void show_random(oRSample *rSelected);
+void calculate_K(oSample *sVector, oRSample *rSamples);
 void toArray(oSample iSample, int *sVector);
 int Euclidean(int *rVector, int *sVector);
 void sort_data(oDist *vDistances);
-void show_distances(oDist *vDistances);
+void show_distances(oDist *vDistances, int K);
 int select_k(oDist *vDistances, oClass cSample);
 int getOdd(int n);
 int getCount(int min, int max);
@@ -115,15 +119,16 @@ int main(int argc, char** argv) {
     cout << "Random Samples:\t" << RANDOM << endl;
 
     oSample Dataset[SZE], randomSamples[RND], rDataset[(SZE - RND)];
+    oRSample rSamples[RND];
     oSample Train, Test;
-    oSampleK kRandomSamples[RND];
-    bool rSelected[SZE] = {};
+    oKSample kRandomSamples[RND];
 
     read_data(Dataset);
+//    cout << sizeof(Dataset)/sizeof(*Dataset) << endl;
     //Show_data(Dataset);
-    select_random(Dataset, randomSamples, rSelected);
+    select_random(Dataset, rSamples);
     //Show_random(randomSamples);
-    calculate_K(rDataset, randomSamples);
+    calculate_K(Dataset, rSamples);
     return 0;
 }
 
@@ -227,8 +232,10 @@ void show_data(oSample *samplesVector, int Size) {
     cout << endl;
 }
 
-void select_random(oSample *sVector, oSample *rSamples, bool *rSelected) {
+void select_random(oSample *sVector, oRSample *rSamples) {
+    bool rSelected[SZE] = {};
     oSample randomSelected;
+    oRSample randSelected;
     //    srand((int)time(0));
     int index;
     int count = 0;
@@ -240,7 +247,9 @@ void select_random(oSample *sVector, oSample *rSamples, bool *rSelected) {
             if (!rSelected[index]) {
                 randomSelected = sVector[index];
                 if (randomSelected.Class == oClass) {
-                    rSamples[count] = randomSelected;
+                    randSelected.Sample = randomSelected;
+                    randSelected.Index = index;
+                    rSamples[count] = randSelected;
                     rSelected[index] = true;
                     instances++;
                     count++;
@@ -252,41 +261,48 @@ void select_random(oSample *sVector, oSample *rSamples, bool *rSelected) {
     cout << endl;
 }
 
-void show_random(oSample *rSelected) {
-    cout << "          ---------- Selected samples ----------" << endl;
+void show_random(oRSample *rSelected) {
+    cout << "\t\t---------- Selected samples ----------" << endl;
+    cout << "N \t" << "Radio\t" << "Ratio\t" << "White\t" << "Black\t" << 
+            "BW\t" << "Green\t" << "C\t" << "Index" << endl;
     for (int i = 0; i < RND; i++) {
         cout << "[" << i << "] \t" <<
-                rSelected[i].Features.Radio << "\t" <<
-                rSelected[i].Features.Ratio << "\t" <<
-                rSelected[i].Features.White << "\t" <<
-                rSelected[i].Features.Black << "\t" <<
-                rSelected[i].Features.BoutG << "\t" <<
-                rSelected[i].Features.Green << "\t" <<
-                rSelected[i].Class << endl;
+                rSelected[i].Sample.Features.Radio << "\t" <<
+                rSelected[i].Sample.Features.Ratio << "\t" <<
+                rSelected[i].Sample.Features.White << "\t" <<
+                rSelected[i].Sample.Features.Black << "\t" <<
+                rSelected[i].Sample.Features.BoutG << "\t" <<
+                rSelected[i].Sample.Features.Green << "\t" <<
+                rSelected[i].Sample.Class << "\t" <<
+                rSelected[i].Index << endl;
     }
     cout << endl;
 }
 
-void calculate_K(oSample *sVector, oSample *rSamples) {
-    oDist vDistances[SZE], cDist;
-    oSample cRandom, cSample;
+void calculate_K(oSample *sVector, oRSample *rSamples) {
+    oDist vDistances[(SZE - 1)], cDist;
+    oRSample cRandom, cSample;
     int vRandom[FTS], vSample[FTS];
-    int kValue;
-    oSampleK auxSample;
+    int kValue, sDistance;
+    oKSample auxSample;
     for (int x = 0; x < RND; x++) {
         cRandom = rSamples[x];
-        for (int y = 0; y < SZE; y++) {
-            cSample = sVector[y];
-            toArray(cRandom, vRandom);
-            toArray(cSample, vSample);
-            cDist.Distance = Euclidean(vRandom, vSample);
-            cDist.Class = cSample.Class;
+        toArray(cRandom.Sample, vRandom);
+        for (int y = 0; y < SZE - 1; y++) {
+            cSample.Sample = sVector[y];            
+            toArray(cSample.Sample, vSample);
+            sDistance = Euclidean(vRandom, vSample);
+            if (sDistance == 0 && cRandom.Index == y) {
+                continue;
+            }
+            cDist.Distance = sDistance;
+            cDist.Class = cSample.Sample.Class;
             vDistances[y] = cDist;
         }
         sort_data(vDistances);
-        kValue = select_k(vDistances, cRandom.Class);
-        auxSample.Sample = cRandom;
-        auxSample.K = kValue;
+//        kValue = select_k(vDistances, cRandom.Sample.Class);
+        //auxSample.Sample = cRandom;
+        //auxSample.K = kValue;
     }
 }
 
@@ -317,9 +333,9 @@ int Euclidean(int *rVector, int *sVector) {
 void sort_data(oDist *vDistances) {
     oDist auxDist;
     int min_index;
-    for (int i = 0; i < SZE - 1; i++) {
+    for (int i = 0; i < (SZE - 2); i++) {
         min_index = i;
-        for (int j = i + 1; j < SZE; j++) {
+        for (int j = i + 1; j < (SZE - 1); j++) {
             if (vDistances[j].Distance < vDistances[min_index].Distance) {
                 min_index = j;
             }
@@ -328,6 +344,7 @@ void sort_data(oDist *vDistances) {
         vDistances[i] = vDistances[min_index];
         vDistances[min_index] = auxDist;
     }
+//    show_distances(vDistances, (SZE - 1));
 }
 
 void show_distances(oDist *vDistances, int K) {
