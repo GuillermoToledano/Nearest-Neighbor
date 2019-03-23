@@ -104,8 +104,9 @@ int Euclidean(int *rVector, int *sVector);
 void sort_data(oDist *vDistances);
 void show_distances(oDist *vDistances, int K);
 int select_k(oDist *vDistances, oClass cSample);
-int getOdd(int n);
-int getCount(int min, int max);
+int getOdd(int N);
+int getCount(int Min, int Max);
+float standardDeviation(int Size, float Mean, float *vAccuracy);
 // Variables
 
 int main(int argc, char** argv) {
@@ -283,7 +284,7 @@ void calculate_K(oSample *sVector, oRSample *rSamples) {
     oDist vDistances[(SZE - 1)], cDist;
     oRSample cRandom, cSample;
     int vRandom[FTS], vSample[FTS];
-    int kValue, sDistance;
+    int KValue, sDistance;
     oKSample auxSample;
     for (int x = 0; x < RND; x++) {
         cRandom = rSamples[x];
@@ -300,7 +301,7 @@ void calculate_K(oSample *sVector, oRSample *rSamples) {
             vDistances[y] = cDist;
         }
         sort_data(vDistances);
-//        kValue = select_k(vDistances, cRandom.Sample.Class);
+        KValue = select_k(vDistances, cRandom.Sample.Class);
         //auxSample.Sample = cRandom;
         //auxSample.K = kValue;
     }
@@ -359,8 +360,9 @@ void show_distances(oDist *vDistances, int K) {
 int select_k(oDist *vDistances, oClass cSample) {
     int size;
     int K = 5;
-    double cAccuracy, sAccuracy;
+    float cTolerance;
     int success, correct;
+    float cAccuracy, sAccuracy;
     int Kmax = round((SZE - RND) * 0.20);
     cout << "\t\t----- New Sample -----" << endl;
     cout << "----- Values -----" << endl;
@@ -373,7 +375,9 @@ int select_k(oDist *vDistances, oClass cSample) {
     int auxK = K;
     size = getCount(auxK, Kmax);
     cout << "N numbers:\t" << size << endl;
-    double pMeasures[size];
+    float accuracy[size], tolerance[size];
+    float greatest = 0;
+    float sum = 0;
     int count = 0;
     cout << "\t\t--------- Measures ---------" << endl;
     while (K <= Kmax) {
@@ -384,52 +388,74 @@ int select_k(oDist *vDistances, oClass cSample) {
                 success++;
             }
         }
-        sAccuracy = (double) success / K;
-        cAccuracy = (double) correct / K;
-        if (cAccuracy > 1) {
-            cAccuracy = floor(cAccuracy);
+        sAccuracy = (float)success / K;
+        cAccuracy = (float)correct / K;
+        cTolerance = ((float) correct - 1) / K;
+        if (cAccuracy > greatest) {
+            greatest = cAccuracy;
         }
-        pMeasures[count] = cAccuracy;
+        sum += cAccuracy;
+        accuracy[count] = cAccuracy;
+        tolerance[count] = cTolerance;
         cout << "[" << K << "]" <<
                 " Correct:\t" << correct <<
                 " Success:\t" << success <<
                 " Accuracy:\t" << cAccuracy <<
-                " Tolerance:\t" << ((float) correct - 1) / K << endl;
+                " Tolerance:\t" << cTolerance << endl;
         count++;
         K += 2;
     }
-    cout << "Count:\t" << count << endl;
-    K = 5;
-    for (int i = 0; i < size; i++) {
-        if (pMeasures[i] >= 0.60) {
-            cout << "Selected K:\t" << K << endl;
-            show_distances(vDistances, K);
-            cout << endl;
-            cout << endl;
-            return K;
-        }
-        K += 2;
-    }
-    K = 1;
-    cout << "Selected K:\t" << K << endl;
-    show_distances(vDistances, K);
-    cout << endl;
-    cout << endl;
-    return K;
+    float mean = sum / size;
+    float stDev = standardDeviation(size, mean, accuracy);
+    cout << "Greatest Value:\t" << greatest << endl;
+    cout << "Sum:\t" << sum << endl;
+    cout << "Mean:\t" << mean << endl;
+    cout << "St Dev:\t" << stDev << endl;
+    float Thrs = greatest - stDev * 2;
+    cout << "Thrs:\t" << Thrs << endl;
+//    cout << "Count:\t" << count << endl;
+//    K = 5;
+//    for (int i = 0; i < size; i++) {
+//        if (accuracy[i] >= 0.60) {
+//            cout << "Selected K:\t" << K << endl;
+//            show_distances(vDistances, K);
+//            cout << endl;
+//            cout << endl;
+//            return K;
+//        }
+//        K += 2;
+//    }
+//    K = 1;
+//    cout << "Selected K:\t" << K << endl;
+//    show_distances(vDistances, K);
+//    cout << endl;
+//    cout << endl;
+//    return K;
+    
 }
 
-int getOdd(int n) {
-    while (n % 2 == 0) {
-        n++;
+int getOdd(int N) {
+    while (N % 2 == 0) {
+        N++;
     }
-    return n;
+    return N;
 }
 
-int getCount(int min, int max) {
+int getCount(int Min, int Max) {
     int count = 0;
-    while (min <= max) {
+    while (Min <= Max) {
         count++;
-        min += 2;
+        Min += 2;
     }
     return count;
+}
+
+float standardDeviation(int Size, float Mean, float *vAccuracy) {
+    float StDev, Sum = 0;
+    for (int i = 0; i < Size; i++) {
+        Sum += powf((vAccuracy[i] - Mean), 2);
+    }
+    StDev = Sum / (Size - 1);
+    StDev = sqrtf(StDev);
+    return StDev;
 }
