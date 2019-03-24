@@ -11,6 +11,9 @@ dist/
 nbdist/
 .nb-gradle/
 
+#
+.inc
+
 # Prerequisites
 *.d
 
