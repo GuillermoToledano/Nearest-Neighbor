@@ -131,7 +131,7 @@ int main(int argc, char** argv) {
     //Show_data(Dataset);
     select_random(Dataset, rSamples, Features);
     //Show_random(randomSamples);
-    calculate_K(Dataset, rSamples);
+    calculate_K(Dataset, rSamples, Features);
     return 0;
 }
 
@@ -308,7 +308,7 @@ void calculate_K(oSample *sVector, oRSample *rSamples, oFile Features) {
             vDistances[y] = cDist;
         }
         sort_data(vDistances, oSize);
-        KValue = select_k(vDistances, cRandom.Sample.Class);
+        KValue = select_k(vDistances, cRandom.Sample.Class, Features);
         //auxSample.Sample = cRandom;
         //auxSample.K = kValue;
     }
@@ -421,7 +421,7 @@ int select_k(oDist *vDistances, oClass cSample, oFile Features) {
     cout << "St Dev:\t" << stDev << endl;
     float Thrs = greatest - stDev * 2;
     cout << "Thrs:\t" << Thrs << endl;
-    
+    cout << endl;
 }
 
 int getOdd(int N) {
