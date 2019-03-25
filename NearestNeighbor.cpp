@@ -90,44 +90,46 @@ struct oFile {
     int nSamples;
     int nFeatures;
     int nInstances;
+    int nRandom;
 };
 
 // Prototypes
 oFile count_samples();
 void read_data(oSample *samplesVector);
 void show_data(oSample *sVector, int size);
-void select_random(oSample *sVector, oRSample *rSamples);
-void show_random(oRSample *rSelected);
-void calculate_K(oSample *sVector, oRSample *rSamples);
+void select_random(oSample *sVector, oRSample *rSamples, oFile Features);
+void show_random(oRSample *rSelected, int nRandom);
+void calculate_K(oSample *sVector, oRSample *rSamples, oFile Features);
 void toArray(oSample iSample, int *sVector);
-int Euclidean(int *rVector, int *sVector);
-void sort_data(oDist *vDistances);
+int Euclidean(int *rVector, int *sVector, int Features);
+void sort_data(oDist *vDistances, int Size);
 void show_distances(oDist *vDistances, int K);
-int select_k(oDist *vDistances, oClass cSample);
+int select_k(oDist *vDistances, oClass cSample, oFile Features);
 int getOdd(int N);
 int getCount(int Min, int Max);
 float standardDeviation(int Size, float Mean, float *vAccuracy);
 // Variables
 
 int main(int argc, char** argv) {
-    oFile File;
-    File = count_samples();
-    int SIZE = File.nSamples;
-    int FEATURES = File.nFeatures;
+    oFile Features;
+    Features = count_samples();
+    int SIZE = Features.nSamples;
+    int FEATURES = Features.nFeatures;
     cout << "Total Samples:\t" << SIZE << endl;
     cout << "Total Features:\t" << FEATURES << endl;
     int RANDOM = SIZE * 0.10;
+    Features.nRandom = RANDOM;
     cout << "Random Samples:\t" << RANDOM << endl;
 
-    oSample Dataset[SZE], randomSamples[RND], rDataset[(SZE - RND)];
-    oRSample rSamples[RND];
+    oSample Dataset[SIZE], randomSamples[RANDOM], rDataset[(SIZE - RANDOM)];
+    oRSample rSamples[RANDOM];
     oSample Train, Test;
-    oKSample kRandomSamples[RND];
+    oKSample kRandomSamples[RANDOM];
 
     read_data(Dataset);
 //    cout << sizeof(Dataset)/sizeof(*Dataset) << endl;
     //Show_data(Dataset);
-    select_random(Dataset, rSamples);
+    select_random(Dataset, rSamples, Features);
     //Show_random(randomSamples);
     calculate_K(Dataset, rSamples);
     return 0;
@@ -233,8 +235,10 @@ void show_data(oSample *samplesVector, int Size) {
     cout << endl;
 }
 
-void select_random(oSample *sVector, oRSample *rSamples) {
-    bool rSelected[SZE] = {};
+void select_random(oSample *sVector, oRSample *rSamples, oFile Features) {
+    int Size = Features.nSamples;
+    int Rand = Features.nRandom;
+    bool rSelected[Size] = {};
     oSample randomSelected;
     oRSample randSelected;
     //    srand((int)time(0));
@@ -258,15 +262,15 @@ void select_random(oSample *sVector, oRSample *rSamples) {
             }
         }
     }
-    show_random(rSamples);
+    show_random(rSamples, Rand);
     cout << endl;
 }
 
-void show_random(oRSample *rSelected) {
+void show_random(oRSample *rSelected, int nRandom) {
     cout << "\t\t---------- Selected samples ----------" << endl;
     cout << "N \t" << "Radio\t" << "Ratio\t" << "White\t" << "Black\t" << 
             "BW\t" << "Green\t" << "C\t" << "Index" << endl;
-    for (int i = 0; i < RND; i++) {
+    for (int i = 0; i < nRandom; i++) {
         cout << "[" << i << "] \t" <<
                 rSelected[i].Sample.Features.Radio << "\t" <<
                 rSelected[i].Sample.Features.Ratio << "\t" <<
@@ -280,19 +284,22 @@ void show_random(oRSample *rSelected) {
     cout << endl;
 }
 
-void calculate_K(oSample *sVector, oRSample *rSamples) {
-    oDist vDistances[(SZE - 1)], cDist;
+void calculate_K(oSample *sVector, oRSample *rSamples, oFile Features) {
+    int oSize = Features.nSamples;
+    int oFTS = Features.nFeatures;
+    int oRND = Features.nRandom;
+    oDist vDistances[(oSize - 1)], cDist;
     oRSample cRandom, cSample;
-    int vRandom[FTS], vSample[FTS];
+    int vRandom[oFTS], vSample[oFTS];
     int KValue, sDistance;
     oKSample auxSample;
-    for (int x = 0; x < RND; x++) {
+    for (int x = 0; x < oRND; x++) {
         cRandom = rSamples[x];
         toArray(cRandom.Sample, vRandom);
-        for (int y = 0; y < SZE - 1; y++) {
+        for (int y = 0; y < oSize - 1; y++) {
             cSample.Sample = sVector[y];            
             toArray(cSample.Sample, vSample);
-            sDistance = Euclidean(vRandom, vSample);
+            sDistance = Euclidean(vRandom, vSample, oFTS);
             if (sDistance == 0 && cRandom.Index == y) {
                 continue;
             }
@@ -300,7 +307,7 @@ void calculate_K(oSample *sVector, oRSample *rSamples) {
             cDist.Class = cSample.Sample.Class;
             vDistances[y] = cDist;
         }
-        sort_data(vDistances);
+        sort_data(vDistances, oSize);
         KValue = select_k(vDistances, cRandom.Sample.Class);
         //auxSample.Sample = cRandom;
         //auxSample.K = kValue;
@@ -317,10 +324,10 @@ void toArray(oSample iSample, int *sVector) {
     sVector[6] = iSample.Class;
 }
 
-int Euclidean(int *rVector, int *sVector) {
+int Euclidean(int *rVector, int *sVector, int Features) {
     int Sum, Dist, X, Y, S;
     Sum = 0;
-    for (int i = 0; i < FTS - 1; i++) {
+    for (int i = 0; i < Features - 1; i++) {
         X = rVector[i];
         Y = sVector[i];
         S = X - Y;
@@ -331,12 +338,12 @@ int Euclidean(int *rVector, int *sVector) {
     return Dist;
 }
 
-void sort_data(oDist *vDistances) {
+void sort_data(oDist *vDistances, int Size) {
     oDist auxDist;
     int min_index;
-    for (int i = 0; i < (SZE - 2); i++) {
+    for (int i = 0; i < (Size - 2); i++) {
         min_index = i;
-        for (int j = i + 1; j < (SZE - 1); j++) {
+        for (int j = i + 1; j < (Size - 1); j++) {
             if (vDistances[j].Distance < vDistances[min_index].Distance) {
                 min_index = j;
             }
@@ -357,13 +364,14 @@ void show_distances(oDist *vDistances, int K) {
     }
 }
 
-int select_k(oDist *vDistances, oClass cSample) {
-    int size;
+int select_k(oDist *vDistances, oClass cSample, oFile Features) {
+    int Size = Features.nSamples;
+    int Rand = Features.nRandom;
     int K = 5;
     float cTolerance;
     int success, correct;
     float cAccuracy, sAccuracy;
-    int Kmax = round((SZE - RND) * 0.20);
+    int Kmax = round((Size - Rand) * 0.20);
     cout << "\t\t----- New Sample -----" << endl;
     cout << "----- Values -----" << endl;
     cout << "Class:\t" << cSample << endl;
@@ -373,9 +381,9 @@ int select_k(oDist *vDistances, oClass cSample) {
     }
     cout << "Max K value:\t" << Kmax << endl;
     int auxK = K;
-    size = getCount(auxK, Kmax);
-    cout << "N numbers:\t" << size << endl;
-    float accuracy[size], tolerance[size];
+    int nSize = getCount(auxK, Kmax);
+    cout << "N numbers:\t" << nSize << endl;
+    float accuracy[nSize], tolerance[nSize];
     float greatest = 0;
     float sum = 0;
     int count = 0;
@@ -405,32 +413,14 @@ int select_k(oDist *vDistances, oClass cSample) {
         count++;
         K += 2;
     }
-    float mean = sum / size;
-    float stDev = standardDeviation(size, mean, accuracy);
+    float mean = sum / nSize;
+    float stDev = standardDeviation(nSize, mean, accuracy);
     cout << "Greatest Value:\t" << greatest << endl;
     cout << "Sum:\t" << sum << endl;
     cout << "Mean:\t" << mean << endl;
     cout << "St Dev:\t" << stDev << endl;
     float Thrs = greatest - stDev * 2;
     cout << "Thrs:\t" << Thrs << endl;
-//    cout << "Count:\t" << count << endl;
-//    K = 5;
-//    for (int i = 0; i < size; i++) {
-//        if (accuracy[i] >= 0.60) {
-//            cout << "Selected K:\t" << K << endl;
-//            show_distances(vDistances, K);
-//            cout << endl;
-//            cout << endl;
-//            return K;
-//        }
-//        K += 2;
-//    }
-//    K = 1;
-//    cout << "Selected K:\t" << K << endl;
-//    show_distances(vDistances, K);
-//    cout << endl;
-//    cout << endl;
-//    return K;
     
 }
 
