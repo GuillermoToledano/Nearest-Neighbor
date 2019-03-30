@@ -1,10 +1,18 @@
+% Author: Guillermo Toledano
+% Year: 2019
+% Universidad Autónoma de Tamaulipas
+% Facultad de Ingeniería
+% División de Esstudios de Posgrado e Investigación
+% Maestría en Ciencias de la Computación
+%   First block need to be a list of attributes
+%   Second block will be the data list
 @attribute radio 
 @attribute ratio
 @attribute white
 @attribute black
 @attribute woutb
 @attribute green
-@attribute class
+@attribute class { 1 2 3 4 5 6 }
 @data
 104 1.04926 74.967 25.033 22.1305 2.90247 4
 103.75 1.04433 68.28 31.72 30.8719 0.848127 5

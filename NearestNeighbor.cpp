@@ -89,6 +89,7 @@ struct oData {
     int nFeatures;
     int nInstances;
     int nRandom;
+    int nSPI;
 } Features;
 
 // Prototypes
@@ -109,19 +110,24 @@ int getOdd(int N);
 int getCount(int Min, int Max);
 float standardDeviation(int Size, float Mean, float *vAccuracy);
 //Functions with arrays
-void read_data(float **mSamples, oData Features);
+void read_data(float **mSamples, float **mInstances, oData Features);
 void show_data(float **mSamples, int ROWS, int COLS);
+void show_instances(float **mInstances, int ROWS, int COLS);
+void select_random(float **mSamples, float **mRandom, oData Features);
 // Variables
 
 int main(int argc, char** argv) {
     Features = read_features();
     int SIZE = Features.nSamples;
     int FEATURES = Features.nFeatures;
+    int INSTANCES = Features.nInstances;
     int RANDOM = SIZE * 0.10;
     Features.nRandom = RANDOM;
+    Features.nSPI = 3;
 
     cout << "Total Samples:\t" << SIZE << endl;
     cout << "Total Features:\t" << FEATURES << endl;
+    cout << "Total Classes:\t" << INSTANCES << endl;
     cout << "Random Samples:\t" << RANDOM << endl;
 
     //    oSample Dataset[SIZE], randomSamples[RANDOM], rDataset[(SIZE - RANDOM)];
@@ -135,7 +141,11 @@ int main(int argc, char** argv) {
     }
     float** RSelected = new float*[RANDOM];
     for (int i = 0; i < RANDOM; i++) {
-        RSelected[i] = new float[FEATURES];
+        RSelected[i] = new float[FEATURES+1];
+    }
+    float** Instances = new float*[INSTANCES];
+    for (int i = 0; i < INSTANCES; i++) {
+        Instances[i] = new float[2];
     }
     //struct
     //read_data(Dataset);
@@ -143,33 +153,58 @@ int main(int argc, char** argv) {
     //select_random(Dataset, rSamples, Features);
     //Show_random(randomSamples);
     //calculate_K(Dataset, rSamples, Features);
-    
+
     // Array
-    read_data(Dataset, Features);
+    read_data(Dataset, Instances, Features);
+    select_random(Dataset, RSelected, Features);
     return 0;
 }
 
 oData read_features() {
     const string attribute = "@attribute";
+    const string oclass = "class";
     const string data = "@data";
+    const char oCBracket = '{';
+    const char cCBracket = '}';
+    const char comment = '%';
     oData Features;
     ifstream file;
     file.open("Data Files/Features.txt", ios::in);
     if (file.is_open()) {
-        string sLine;
+        string sWord;
+        string sClass;
+        string sBracket;
         int nSamples = 0;
         int nFeatures = 0;
+        int nInstances = 0;
         bool reading_attrs = true;
         while (reading_attrs) {
-            file >> sLine;
-            if (sLine.compare(attribute) == 0) {
-                nFeatures++;
+            file >> sWord;
+            if (sWord[0] == comment) {
+                continue;
             }
-            if (sLine.compare(data) == 0) {
+            if (sWord.compare(attribute) == 0) {
+                nFeatures++;
+                file >> sClass;
+                if (sClass.compare(oclass) == 0) {
+                    //cout << sClass << endl;
+                    file >> sBracket;
+                    if (sBracket[0] == oCBracket) {
+                        //cout << sBracket << endl;
+                        file >> sBracket;
+                        while (sBracket[0] != cCBracket) {
+                            //cout << sBracket << endl;
+                            nInstances++;
+                            file >> sBracket;
+                        }
+                    }
+                }
+            }
+            if (sWord.compare(data) == 0) {
                 reading_attrs = false;
                 while (!file.eof()) {
-                    getline(file, sLine);
-                    if (!sLine.empty() && sLine.length() > 1) {
+                    getline(file, sWord);
+                    if (!sWord.empty() && sWord.length() > 1) {
                         nSamples++;
                     }
                 }
@@ -177,45 +212,45 @@ oData read_features() {
         }
         Features.nFeatures = nFeatures;
         Features.nSamples = nSamples;
+        Features.nInstances = nInstances;
     }
     return Features;
 }
 
-oData count_samples() {
-    oData outFile;
-    ifstream file("Data Files/Samples_.txt");
-    string line;
-    int count = 0;
-    int features = 0;
-    bool flag = false;
-    while (getline(file, line)) {
-        if (!flag) {
-            for (char c : line) {
-                if (c == ' ') {
-                    features++;
-                }
-            }
-            flag = true;
-        }
-        count++;
-    }
 
-    outFile.nSamples = count;
-    outFile.nFeatures = features + 1;
-    return outFile;
-}
-
-void read_data(float **mSamples, oData Features) {
+void read_data(float **mSamples, float **mInstances, oData Features) {
+    int INST = Features.nInstances;
+    int COLS = Features.nFeatures;
+    int ROWS = Features.nSamples;
+    const string attribute = "@attribute";
+    const string oclass = "class";
+    const string oCBracket = "{";
     const string data = "@data";
     bool search_data = true;
     ifstream file;
     file.open("Data Files/Features.txt", ios::in);
     if (file.is_open()) {
-        string sLine;
+        string sWord;
         cout << "Reading data..." << endl;
         while (search_data) {
-            file >> sLine;
-            if (sLine.compare(data) == 0) {
+            file >> sWord;
+            if (sWord.compare(attribute) == 0) {
+                //cout << sWord << endl;
+                file >> sWord;
+                if (sWord.compare(oclass) == 0) {
+                    //cout << sWord << endl;
+                    file >> sWord;
+                    if (sWord.compare(oCBracket) == 0) {
+                        //cout << sWord << endl;
+                        float instance;
+                        for (int i = 0; i < INST; i++) {
+                            file >> instance;
+                            mInstances[i][0] = instance;
+                        }
+                    }
+                }
+            }
+            if (sWord.compare(data) == 0) {
                 int nFeatures = Features.nFeatures;
                 search_data = false;
                 float feature;
@@ -233,8 +268,7 @@ void read_data(float **mSamples, oData Features) {
                 }
             }
         }
-        int ROWS = Features.nSamples;
-        int COLS = Features.nFeatures;
+        show_instances(mInstances, INST, 2);
         show_data(mSamples, ROWS, COLS);
     }
 }
@@ -250,6 +284,49 @@ void show_data(float **mSamples, int ROWS, int COLS) {
     }
 }
 
+void show_instances(float **mInstances, int ROWS, int COLS) {
+    cout << "----- Instances -----" << endl;
+    for (int row = 0; row < ROWS; row++) {
+        cout << "[" << row << "]\t";
+        for (int col = 0; col < COLS; col++) {
+            cout << mInstances[row][col] << "\t";
+        }
+        cout << endl;
+    }
+}
+
+void select_random(float **mSamples, float **mRandom, oData Features) {
+    int ROWS = Features.nSamples;
+    int COLS = Features.nFeatures;
+    int CLSS = Features.nInstances;
+    int NSPI = Features.nSPI;
+    bool rSelected[ROWS] = {};
+    float selected[COLS];
+    int randIndex;
+    int count = 0;
+    int instances;
+    //
+    for (int oClass = 1; oClass <= CLSS; oClass++) {
+        instances = 0;
+        while (instances < NSPI) {
+            randIndex = rand() % ROWS;
+            if (!rSelected[randIndex]) {
+                /*
+                for (int i = 0; i < COLS; i++) {
+                    selected[i] = mSamples[randIndex][i];
+                    if (selected[COLS - 1] == oClass) {
+                        
+                    }
+                }
+                */
+                if (mSamples[randIndex][COLS-1] == oClass) {
+                    //cout << mSamples[randIndex][COLS-1] << endl;
+                    instances++;
+                }
+            }
+        }
+    }
+}
 //struct
 void read_data(oSample *samplesVector) {
     double radio, ratio, white, black, green, boutg;
