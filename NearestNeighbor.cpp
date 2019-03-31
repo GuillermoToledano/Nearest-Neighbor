@@ -87,7 +87,7 @@ struct oDist {
 struct oData {
     int nSamples;
     int nFeatures;
-    int nInstances;
+    int nClasses;
     int nRandom;
     int nSPI;
 } Features;
@@ -110,25 +110,34 @@ int getOdd(int N);
 int getCount(int Min, int Max);
 float standardDeviation(int Size, float Mean, float *vAccuracy);
 //Functions with arrays
-void read_data(float **mSamples, float **mInstances, oData Features);
-void count_instances(float **mSamples, float **mInstances, oData Features);
+void read_data(float **mSamples, float **mClasses, oData Features);
+void count_instances(float **mSamples, float **mClasses, oData Features);
 void show_data(float **mSamples, int ROWS, int COLS);
-void show_instances(float **mInstances, int ROWS, int COLS);
-void select_random(float **mSamples, float **mRandom, oData Features);
+void show_instances(float **mClasses, int ROWS, int COLS);
+void select_random(float **mSamples, float **mClasses, float **mRandom, oData Features);
+void show_random(float **mRandom, int ROWS, int COLS);
 // Variables
 
 int main(int argc, char** argv) {
     Features = read_features();
-    int SIZE = Features.nSamples;
     int FEATURES = Features.nFeatures;
-    int INSTANCES = Features.nInstances;
+    int CLASSES = Features.nClasses;
+    int SIZE = Features.nSamples;
     int RANDOM = SIZE * 0.10;
-    Features.nRandom = RANDOM;
     Features.nSPI = 3;
-
+    int target = CLASSES * Features.nSPI;    
+    while (RANDOM != target) {
+        if (RANDOM < target) {
+            RANDOM++;
+        } else {
+            RANDOM--;
+        }
+    }
+    Features.nRandom = RANDOM;
+    
     cout << "Total Samples:\t" << SIZE << endl;
     cout << "Total Features:\t" << FEATURES << endl;
-    cout << "Total Classes:\t" << INSTANCES << endl;
+    cout << "Total Classes:\t" << CLASSES << endl;
     cout << "Random Samples:\t" << RANDOM << endl;
 
     //    oSample Dataset[SIZE], randomSamples[RANDOM], rDataset[(SIZE - RANDOM)];
@@ -144,8 +153,8 @@ int main(int argc, char** argv) {
     for (int i = 0; i < RANDOM; i++) {
         RSelected[i] = new float[FEATURES+1];
     }
-    float** Instances = new float*[INSTANCES];
-    for (int i = 0; i < INSTANCES; i++) {
+    float** Instances = new float*[CLASSES];
+    for (int i = 0; i < CLASSES; i++) {
         Instances[i] = new float[2];
     }
     //struct
@@ -157,7 +166,7 @@ int main(int argc, char** argv) {
 
     // Array
     read_data(Dataset, Instances, Features);
-    select_random(Dataset, RSelected, Features);
+    select_random(Dataset, Instances, RSelected, Features);
     return 0;
 }
 
@@ -213,13 +222,13 @@ oData read_features() {
         }
         Features.nFeatures = nFeatures;
         Features.nSamples = nSamples;
-        Features.nInstances = nInstances;
+        Features.nClasses = nInstances;
     }
     return Features;
 }
 
-void read_data(float **mSamples, float **mInstances, oData Features) {
-    int INST = Features.nInstances;
+void read_data(float **mSamples, float **mClasses, oData Features) {
+    int INST = Features.nClasses;
     int COLS = Features.nFeatures;
     int ROWS = Features.nSamples;
     const string attribute = "@attribute";
@@ -245,7 +254,7 @@ void read_data(float **mSamples, float **mInstances, oData Features) {
                         float instance;
                         for (int i = 0; i < INST; i++) {
                             file >> instance;
-                            mInstances[i][0] = instance;
+                            mClasses[i][0] = instance;
                         }
                     }
                 }
@@ -268,8 +277,8 @@ void read_data(float **mSamples, float **mInstances, oData Features) {
                 }
             }
         }
-        count_instances(mSamples, mInstances, Features);
-        show_instances(mInstances, INST, 2);
+        count_instances(mSamples, mClasses, Features);
+        show_instances(mClasses, INST, 2);
         show_data(mSamples, ROWS, COLS);
     }
 }
@@ -283,16 +292,17 @@ void show_data(float **mSamples, int ROWS, int COLS) {
         }
         cout << endl;
     }
+    cout << endl;
 }
 
-void count_instances(float **mSamples, float **mInstances, oData Features) {
+void count_instances(float **mSamples, float **mClasses, oData Features) {
     int nSamples = Features.nSamples;
-    int nInstances = Features.nInstances;
+    int nInstances = Features.nClasses;
     int nFeatures = Features.nFeatures;
     int oClass, count;
     bool counted[nSamples] = {};
     for (int ins = 0; ins < nInstances; ins++) {
-        oClass = mInstances[ins][0];
+        oClass = mClasses[ins][0];
         count = 0;
         for (int i = 0; i < nSamples; i++) {
             if (counted[i]) {
@@ -304,7 +314,7 @@ void count_instances(float **mSamples, float **mInstances, oData Features) {
                 }
             }
         }
-        mInstances[ins][1] = count;
+        mClasses[ins][1] = count;
     }
 }
 
@@ -319,37 +329,54 @@ void show_instances(float **mInstances, int ROWS, int COLS) {
     }
 }
 
-void select_random(float **mSamples, float **mRandom, oData Features) {
+void select_random(float **mSamples, float **mClasses, float **mRandom, oData Features) {
     int ROWS = Features.nSamples;
     int COLS = Features.nFeatures;
-    int CLSS = Features.nInstances;
+    int CLSS = Features.nClasses;
+    int RNDM = Features.nRandom;
     int NSPI = Features.nSPI;
-    bool rSelected[ROWS] = {};
-    float selected[COLS];
+    bool Selected[ROWS] = {};
+    float current_class;
     int randIndex;
     int count = 0;
     int instances;
-    //
-    for (int oClass = 1; oClass <= CLSS; oClass++) {
+    
+    for (int sClass = 0; sClass < CLSS; sClass++) {
+        current_class = mClasses[sClass][0];
+        //cout << current_class << endl;
         instances = 0;
         while (instances < NSPI) {
             randIndex = rand() % ROWS;
-            if (!rSelected[randIndex]) {
-                /*
-                for (int i = 0; i < COLS; i++) {
-                    selected[i] = mSamples[randIndex][i];
-                    if (selected[COLS - 1] == oClass) {
-                        
-                    }
-                }
-                */
-                if (mSamples[randIndex][COLS-1] == oClass) {
+            if (!Selected[randIndex]) {
+                if (mSamples[randIndex][COLS-1] == current_class) {
                     //cout << mSamples[randIndex][COLS-1] << endl;
+                    for (int i = 0; i < COLS; i++) {
+                        //cout << mSamples[randIndex][i] << " ";
+                        mRandom[count][i] = mSamples[randIndex][i];
+                        //cout << mRandom[count][i] << " ";
+                    }
+                    //cout << endl;
+                    mRandom[count][COLS] = randIndex;
+                    Selected[randIndex] = true;
                     instances++;
+                    count++;
                 }
             }
         }
     }
+    show_random(mRandom, RNDM, COLS+1);
+}
+
+void show_random(float **mRandom, int ROWS, int COLS) {
+    cout << "\t---------- Randomly Selected Samples ----------" << endl;
+    for (int i = 0; i < ROWS; i++) {
+        cout << "[" << i << "]\t";
+        for (int j = 0; j < COLS; j++) {
+            cout << mRandom[i][j] << "\t";
+        }
+        cout << endl;
+    }
+    cout << endl;
 }
 //struct
 void read_data(oSample *samplesVector) {
