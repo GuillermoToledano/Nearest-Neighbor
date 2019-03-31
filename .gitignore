@@ -3,6 +3,7 @@ build/
 nbbuild/
 dist/
 nbdist/
+/.dep.inc
 
 # XML
 *.xml
