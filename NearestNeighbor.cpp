@@ -111,6 +111,7 @@ int getCount(int Min, int Max);
 float standardDeviation(int Size, float Mean, float *vAccuracy);
 //Functions with arrays
 void read_data(float **mSamples, float **mInstances, oData Features);
+void count_instances(float **mSamples, float **mInstances, oData Features);
 void show_data(float **mSamples, int ROWS, int COLS);
 void show_instances(float **mInstances, int ROWS, int COLS);
 void select_random(float **mSamples, float **mRandom, oData Features);
@@ -131,9 +132,9 @@ int main(int argc, char** argv) {
     cout << "Random Samples:\t" << RANDOM << endl;
 
     //    oSample Dataset[SIZE], randomSamples[RANDOM], rDataset[(SIZE - RANDOM)];
-    oRSample rSamples[RANDOM];
-    oSample Train, Test;
-    oKSample kRandomSamples[RANDOM];
+    //oRSample rSamples[RANDOM];
+    //oSample Train, Test;
+    //oKSample kRandomSamples[RANDOM];
     //Array
     float** Dataset = new float*[SIZE];
     for (int i = 0; i < SIZE; i++) {
@@ -217,7 +218,6 @@ oData read_features() {
     return Features;
 }
 
-
 void read_data(float **mSamples, float **mInstances, oData Features) {
     int INST = Features.nInstances;
     int COLS = Features.nFeatures;
@@ -268,19 +268,43 @@ void read_data(float **mSamples, float **mInstances, oData Features) {
                 }
             }
         }
+        count_instances(mSamples, mInstances, Features);
         show_instances(mInstances, INST, 2);
         show_data(mSamples, ROWS, COLS);
     }
 }
 
 void show_data(float **mSamples, int ROWS, int COLS) {
-    cout << "---------- Dataset ----------" << endl;
+    cout << "\t---------- Dataset ----------" << endl;
     for (int row = 0; row < ROWS; row++) {
         cout << "[" << row << "]\t";
         for (int col = 0; col < COLS; col++) {
             cout << mSamples[row][col] << "\t";
         }
         cout << endl;
+    }
+}
+
+void count_instances(float **mSamples, float **mInstances, oData Features) {
+    int nSamples = Features.nSamples;
+    int nInstances = Features.nInstances;
+    int nFeatures = Features.nFeatures;
+    int oClass, count;
+    bool counted[nSamples] = {};
+    for (int ins = 0; ins < nInstances; ins++) {
+        oClass = mInstances[ins][0];
+        count = 0;
+        for (int i = 0; i < nSamples; i++) {
+            if (counted[i]) {
+                continue;
+            } else {
+                if (mSamples[i][nFeatures - 1] == oClass) {
+                    count++;
+                    counted[i] = true;
+                }
+            }
+        }
+        mInstances[ins][1] = count;
     }
 }
 
