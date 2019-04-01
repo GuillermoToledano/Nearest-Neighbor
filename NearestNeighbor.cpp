@@ -119,6 +119,7 @@ void show_random(float **mRandom, int ROWS, int COLS);
 void nearest_neighbor(float **mSamples, float **mRandom, oData Features);
 void toArray(float **mSamples, float *vSample, int Row, int Col);
 float Euclidean(float *rVector, float *sVector, int Features);
+void sort_data(float **vDistances, int Rows);
 // Variables
 
 int main(int argc, char** argv) {
@@ -405,6 +406,7 @@ void nearest_neighbor(float **mSamples, float **mRandom, oData Features) {
             vDistances[i][0] = vDistance;
             vDistances[i][1] = vRandom[COLS];
         }
+        sort_data(vDistances, ROWS);
         rand_row++;
     }
 }
@@ -450,6 +452,8 @@ void sort_data(float **vDistances, int Rows) {
         vDistances[min_row][1] = clss;
     }
 }
+
+
 //struct
 
 void read_data(oSample *samplesVector) {
