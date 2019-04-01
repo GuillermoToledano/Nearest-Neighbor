@@ -116,6 +116,9 @@ void show_data(float **mSamples, int ROWS, int COLS);
 void show_instances(float **mClasses, int ROWS, int COLS);
 void select_random(float **mSamples, float **mClasses, float **mRandom, oData Features);
 void show_random(float **mRandom, int ROWS, int COLS);
+void nearest_neighbor(float **mSamples, float **mRandom, oData Features);
+void toArray(float **mSamples, float *vSample, int Row, int Col);
+float Euclidean(float *rVector, float *sVector, int Features);
 // Variables
 
 int main(int argc, char** argv) {
@@ -125,7 +128,7 @@ int main(int argc, char** argv) {
     int SIZE = Features.nSamples;
     int RANDOM = SIZE * 0.10;
     Features.nSPI = 3;
-    int target = CLASSES * Features.nSPI;    
+    int target = CLASSES * Features.nSPI;
     while (RANDOM != target) {
         if (RANDOM < target) {
             RANDOM++;
@@ -134,7 +137,7 @@ int main(int argc, char** argv) {
         }
     }
     Features.nRandom = RANDOM;
-    
+
     cout << "Total Samples:\t" << SIZE << endl;
     cout << "Total Features:\t" << FEATURES << endl;
     cout << "Total Classes:\t" << CLASSES << endl;
@@ -151,7 +154,7 @@ int main(int argc, char** argv) {
     }
     float** RSelected = new float*[RANDOM];
     for (int i = 0; i < RANDOM; i++) {
-        RSelected[i] = new float[FEATURES+1];
+        RSelected[i] = new float[FEATURES + 1];
     }
     float** Instances = new float*[CLASSES];
     for (int i = 0; i < CLASSES; i++) {
@@ -167,6 +170,7 @@ int main(int argc, char** argv) {
     // Array
     read_data(Dataset, Instances, Features);
     select_random(Dataset, Instances, RSelected, Features);
+    nearest_neighbor(Dataset, RSelected, Features);
     return 0;
 }
 
@@ -340,7 +344,7 @@ void select_random(float **mSamples, float **mClasses, float **mRandom, oData Fe
     int randIndex;
     int count = 0;
     int instances;
-    
+
     for (int sClass = 0; sClass < CLSS; sClass++) {
         current_class = mClasses[sClass][0];
         //cout << current_class << endl;
@@ -348,7 +352,7 @@ void select_random(float **mSamples, float **mClasses, float **mRandom, oData Fe
         while (instances < NSPI) {
             randIndex = rand() % ROWS;
             if (!Selected[randIndex]) {
-                if (mSamples[randIndex][COLS-1] == current_class) {
+                if (mSamples[randIndex][COLS - 1] == current_class) {
                     //cout << mSamples[randIndex][COLS-1] << endl;
                     for (int i = 0; i < COLS; i++) {
                         //cout << mSamples[randIndex][i] << " ";
@@ -364,7 +368,7 @@ void select_random(float **mSamples, float **mClasses, float **mRandom, oData Fe
             }
         }
     }
-    show_random(mRandom, RNDM, COLS+1);
+    show_random(mRandom, RNDM, COLS + 1);
 }
 
 void show_random(float **mRandom, int ROWS, int COLS) {
@@ -378,7 +382,76 @@ void show_random(float **mRandom, int ROWS, int COLS) {
     }
     cout << endl;
 }
+
+void nearest_neighbor(float **mSamples, float **mRandom, oData Features) {
+    int COLS = Features.nFeatures;
+    int ROWS = Features.nSamples;
+    int RNDM = Features.nRandom;
+    float vDistances[ROWS - 1][2];
+    float vRandom[COLS + 1];
+    float vSample[COLS];
+    int rand_row = 0;
+    float vDistance;
+    while (rand_row < RNDM) {
+        toArray(mRandom, vRandom, rand_row, COLS + 1);
+        //cout << endl;
+        for (int i = 0; i < ROWS; i++) {
+            if (mRandom[rand_row][COLS] == i) {
+                //cout << i << endl;
+                continue;
+            }
+            toArray(mSamples, vSample, i, COLS);
+            vDistance = Euclidean(vRandom, vSample, COLS);
+            vDistances[i][0] = vDistance;
+            vDistances[i][1] = vRandom[COLS];
+        }
+        rand_row++;
+    }
+}
+
+void toArray(float **mSamples, float *vSample, int Row, int Col) {
+    for (int i = 0; i < Col; i++) {
+        vSample[i] = mSamples[Row][i];
+        //cout << vSample[i] << " ";
+    }
+    //cout << endl;
+}
+
+float Euclidean(float *rVector, float *sVector, int Features) {
+    int Sum, Dist, X, Y, S;
+    Sum = 0;
+    for (int i = 0; i < Features - 1; i++) {
+        X = rVector[i];
+        Y = sVector[i];
+        S = X - Y;
+        S = pow(S, 2);
+        Sum = Sum + S;
+    }
+    Dist = sqrt(Sum);
+    return Dist;
+}
+
+void sort_data(float **vDistances, int Rows) {
+    int min_row;
+    float dist;
+    int clss;
+    for (int i = 0; i < Rows - 1; i++) {
+        min_row = i;
+        for (int j = i + 1; j < Rows; j++) {
+            if (vDistances[j][0] < vDistances[min_row][0]) {
+                min_row = j;
+            }
+        }
+        dist = vDistances[i][0];
+        clss = vDistances[i][1];
+        vDistances[i][0] = vDistances[min_row][0];
+        vDistances[i][1] = vDistances[min_row][1];
+        vDistances[min_row][0] = dist;
+        vDistances[min_row][1] = clss;
+    }
+}
 //struct
+
 void read_data(oSample *samplesVector) {
     double radio, ratio, white, black, green, boutg;
     int type;
