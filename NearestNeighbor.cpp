@@ -118,8 +118,10 @@ void select_random(float **mSamples, float **mClasses, float **mRandom, oData Fe
 void show_random(float **mRandom, int ROWS, int COLS);
 void nearest_neighbor(float **mSamples, float **mRandom, oData Features);
 void toArray(float **mSamples, float *vSample, int Row, int Col);
+void zeros(float **nDistances, int Rows);
 float Euclidean(float *rVector, float *sVector, int Features);
 void sort_data(float **vDistances, int Rows);
+void show_distances(float **vDistances, int Rows);
 // Variables
 
 int main(int argc, char** argv) {
@@ -385,28 +387,32 @@ void show_random(float **mRandom, int ROWS, int COLS) {
 }
 
 void nearest_neighbor(float **mSamples, float **mRandom, oData Features) {
-    int COLS = Features.nFeatures;
-    int ROWS = Features.nSamples;
-    int RNDM = Features.nRandom;
-    float vDistances[ROWS - 1][2];
-    float vRandom[COLS + 1];
-    float vSample[COLS];
+    int nFeatures = Features.nFeatures;
+    int nSamples = Features.nSamples;
+    int nRandom = Features.nRandom;
+    float **vDistances = new float*[nSamples - 1];
+    for (int i = 0; i < (nSamples - 1); i++) {
+        vDistances[i] = new float[2];
+    }
+    float vRandom[nFeatures + 1] = {};
+    float vSample[nFeatures] = {};
     int rand_row = 0;
     float vDistance;
-    while (rand_row < RNDM) {
-        toArray(mRandom, vRandom, rand_row, COLS + 1);
-        //cout << endl;
-        for (int i = 0; i < ROWS; i++) {
-            if (mRandom[rand_row][COLS] == i) {
-                //cout << i << endl;
+    while (rand_row < nRandom) {
+        int count = 0;
+        toArray(mRandom, vRandom, rand_row, nFeatures + 1);
+        for (int i = 0; i < nSamples; i++) {
+            toArray(mSamples, vSample, i, nFeatures);
+            if (vRandom[nFeatures] == i) {
                 continue;
-            }
-            toArray(mSamples, vSample, i, COLS);
-            vDistance = Euclidean(vRandom, vSample, COLS);
-            vDistances[i][0] = vDistance;
-            vDistances[i][1] = vRandom[COLS];
+            } 
+            vDistance = Euclidean(vRandom, vSample, nFeatures);
+            vDistances[count][0] = vDistance;
+            vDistances[count][1] = vSample[nFeatures - 1];
+            count++;            
         }
-        sort_data(vDistances, ROWS);
+        sort_data(vDistances, nSamples-1);
+        //show_distances(vDistances, nSamples-1);
         rand_row++;
     }
 }
@@ -414,9 +420,7 @@ void nearest_neighbor(float **mSamples, float **mRandom, oData Features) {
 void toArray(float **mSamples, float *vSample, int Row, int Col) {
     for (int i = 0; i < Col; i++) {
         vSample[i] = mSamples[Row][i];
-        //cout << vSample[i] << " ";
     }
-    //cout << endl;
 }
 
 float Euclidean(float *rVector, float *sVector, int Features) {
@@ -436,7 +440,7 @@ float Euclidean(float *rVector, float *sVector, int Features) {
 void sort_data(float **vDistances, int Rows) {
     int min_row;
     float dist;
-    int clss;
+    float clss;
     for (int i = 0; i < Rows - 1; i++) {
         min_row = i;
         for (int j = i + 1; j < Rows; j++) {
@@ -444,16 +448,23 @@ void sort_data(float **vDistances, int Rows) {
                 min_row = j;
             }
         }
-        dist = vDistances[i][0];
-        clss = vDistances[i][1];
-        vDistances[i][0] = vDistances[min_row][0];
-        vDistances[i][1] = vDistances[min_row][1];
-        vDistances[min_row][0] = dist;
-        vDistances[min_row][1] = clss;
+        dist = vDistances[min_row][0];
+        clss = vDistances[min_row][1];
+        vDistances[min_row][0] = vDistances[i][0];
+        vDistances[min_row][1] = vDistances[i][1];
+        vDistances[i][0] = dist;
+        vDistances[i][1] = clss;
     }
 }
 
-
+void show_distances(float **vDistances, int Rows) {
+    cout << "--- Distances ---" << endl;
+    for (int i = 0; i < Rows; i++) {
+        cout << "[" << i << "]\t"
+                << vDistances[i][0] << " "
+                << vDistances[i][1] << endl;
+    }
+}
 //struct
 
 void read_data(oSample *samplesVector) {
