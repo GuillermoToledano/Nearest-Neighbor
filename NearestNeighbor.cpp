@@ -110,6 +110,7 @@ int getOdd(int N);
 int getCount(int Min, int Max);
 float standardDeviation(int Size, float Mean, float *vAccuracy);
 //Functions with arrays
+void readCSV(float **mSamples);
 void read_data(float **mSamples, float **mClasses, oData Features);
 void count_instances(float **mSamples, float **mClasses, oData Features);
 void show_data(float **mSamples, int ROWS, int COLS);
@@ -122,6 +123,7 @@ void zeros(float **nDistances, int Rows);
 float Euclidean(float *rVector, float *sVector, int Features);
 void sort_data(float **vDistances, int Rows);
 void show_distances(float **vDistances, int Rows);
+int bestK(float **mDistances, float sClass, int gSize, oData Features);
 // Variables
 
 int main(int argc, char** argv) {
@@ -146,7 +148,7 @@ int main(int argc, char** argv) {
     cout << "Total Classes:\t" << CLASSES << endl;
     cout << "Random Samples:\t" << RANDOM << endl;
 
-    //    oSample Dataset[SIZE], randomSamples[RANDOM], rDataset[(SIZE - RANDOM)];
+    //oSample Dataset[SIZE], randomSamples[RANDOM], rDataset[(SIZE - RANDOM)];
     //oRSample rSamples[RANDOM];
     //oSample Train, Test;
     //oKSample kRandomSamples[RANDOM];
@@ -157,7 +159,7 @@ int main(int argc, char** argv) {
     }
     float** RSelected = new float*[RANDOM];
     for (int i = 0; i < RANDOM; i++) {
-        RSelected[i] = new float[FEATURES + 1];
+        RSelected[i] = new float[FEATURES + 2];
     }
     float** Instances = new float*[CLASSES];
     for (int i = 0; i < CLASSES; i++) {
@@ -291,11 +293,15 @@ void read_data(float **mSamples, float **mClasses, oData Features) {
 }
 
 void show_data(float **mSamples, int ROWS, int COLS) {
-    cout << "\t---------- Dataset ----------" << endl;
+    cout << "\t\t---------- Dataset ----------" << endl;
     for (int row = 0; row < ROWS; row++) {
-        cout << "[" << row << "]\t";
+        cout << "[" << row << "]" << "\t";
         for (int col = 0; col < COLS; col++) {
-            cout << mSamples[row][col] << "\t";
+            if (col == COLS - 1) {
+                cout << mSamples[row][col];
+            } else {
+                cout << mSamples[row][col] << "\t";
+            }
         }
         cout << endl;
     }
@@ -328,9 +334,13 @@ void count_instances(float **mSamples, float **mClasses, oData Features) {
 void show_instances(float **mInstances, int ROWS, int COLS) {
     cout << "----- Instances -----" << endl;
     for (int row = 0; row < ROWS; row++) {
-        cout << "[" << row << "]\t";
+        cout << "[" << row << "]" << "\t";
         for (int col = 0; col < COLS; col++) {
-            cout << mInstances[row][col] << "\t";
+            if (col == COLS - 1) {
+                cout << mInstances[row][col];
+            } else {
+                cout << mInstances[row][col] << "\t";
+            }
         }
         cout << endl;
     }
@@ -364,6 +374,7 @@ void select_random(float **mSamples, float **mClasses, float **mRandom, oData Fe
                     }
                     //cout << endl;
                     mRandom[count][COLS] = randIndex;
+                    mRandom[count][COLS + 1] = mClasses[sClass][1];
                     Selected[randIndex] = true;
                     instances++;
                     count++;
@@ -371,15 +382,19 @@ void select_random(float **mSamples, float **mClasses, float **mRandom, oData Fe
             }
         }
     }
-    show_random(mRandom, RNDM, COLS + 1);
+    show_random(mRandom, RNDM, COLS + 2);
 }
 
 void show_random(float **mRandom, int ROWS, int COLS) {
     cout << "\t---------- Randomly Selected Samples ----------" << endl;
     for (int i = 0; i < ROWS; i++) {
-        cout << "[" << i << "]\t";
+        cout << "[" << i << "]" << "\t";
         for (int j = 0; j < COLS; j++) {
-            cout << mRandom[i][j] << "\t";
+            if (j == COLS - 1) {
+                cout << mRandom[i][j];
+            } else {
+                cout << mRandom[i][j] << "\t";
+            }
         }
         cout << endl;
     }
@@ -394,25 +409,32 @@ void nearest_neighbor(float **mSamples, float **mRandom, oData Features) {
     for (int i = 0; i < (nSamples - 1); i++) {
         vDistances[i] = new float[2];
     }
-    float vRandom[nFeatures + 1] = {};
+    float vRandom[nFeatures + 2] = {};
     float vSample[nFeatures] = {};
+    float current_class;
     int rand_row = 0;
     float vDistance;
+    int grSize;
+    int K;
     while (rand_row < nRandom) {
         int count = 0;
-        toArray(mRandom, vRandom, rand_row, nFeatures + 1);
+        toArray(mRandom, vRandom, rand_row, nFeatures + 2);
+        current_class = vRandom[nFeatures - 1];
         for (int i = 0; i < nSamples; i++) {
             toArray(mSamples, vSample, i, nFeatures);
             if (vRandom[nFeatures] == i) {
+                //cout << vRandom[nFeatures] << endl;
                 continue;
-            } 
+            }
             vDistance = Euclidean(vRandom, vSample, nFeatures);
             vDistances[count][0] = vDistance;
             vDistances[count][1] = vSample[nFeatures - 1];
-            count++;            
+            count++;
         }
-        sort_data(vDistances, nSamples-1);
-        //show_distances(vDistances, nSamples-1);
+        sort_data(vDistances, nSamples - 1);
+        grSize = vRandom[nFeatures + 1];
+        //cout << grSize << endl;
+        K = bestK(vDistances, current_class, grSize, Features);
         rand_row++;
     }
 }
@@ -464,6 +486,57 @@ void show_distances(float **vDistances, int Rows) {
                 << vDistances[i][0] << " "
                 << vDistances[i][1] << endl;
     }
+}
+
+int bestK(float **mDistances, float sClass, int gSize, oData Features) {
+    int nSamples = Features.nSamples;
+    int nRandoms = Features.nRandom;
+    int nSize;
+    int success;
+    int Kmin = 5;
+    float weight;
+    float impact;
+    float sAccuracy;
+    float sTolerance;
+    int Kmax = round(gSize * 0.90);
+    if (Kmax % 2 == 0) {
+        Kmax = getOdd(Kmax);
+    }
+    nSize = getCount(Kmin, Kmax);
+    cout << "\t\t----- New Sample -----" << endl;
+    cout << "----- Values -----" << endl;
+    cout << "Class:\t" << sClass << endl;
+    cout << "Max K value:\t" << Kmax << endl;
+    cout << "N numbers:\t" << nSize << endl;
+    float accuracy[nSize], tolerance[nSize];
+    cout << "\t--------- Measures ---------" << endl;
+    while (Kmin <= Kmax) {
+        success = 0;
+        for (int i = 0; i < Kmin; i++) {
+            //cout << mDistances[i][1] << endl;
+            if (mDistances[i][1] == sClass) {
+                success++;
+            }
+        }
+        impact = logf(Kmin);
+        sAccuracy = (float) success / Kmin;
+        sTolerance = (float) (success - 1) / Kmin;
+        weight = impact * sAccuracy + impact * sTolerance;
+
+        impact = round(impact * 100.0) / 100.0;
+        weight = round(weight * 100.0) / 100.0;
+        sAccuracy = round(sAccuracy * 100.0) / 100.0;
+        sTolerance = round(sTolerance * 100.0) / 100.0;
+        cout << "[" << Kmin << "]" << "\t"
+                " Success: " << success << "\t"
+                " Accuracy: " << sAccuracy << "\t"
+                " Tolerance: " << sTolerance << "\t"
+                " Impact: " << impact << "\t"
+                " Weight: " << weight << endl;
+
+        Kmin += 2;
+    }
+    cout << endl;
 }
 //struct
 
