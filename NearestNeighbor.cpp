@@ -12,10 +12,11 @@
 #include <string.h>
 #include <istream>
 #include <sstream>
+#include <string>
 #define SPI 3 
 #define CLS 6
 #define FTS 7
-#define FILE "Data Files/Features.txt"
+#define FILE "Data Files/Iris.csv"
 
 using namespace std;
 
@@ -135,14 +136,18 @@ int main(int argc, char** argv) {
     int SIZE = Features.nSamples;
     int RANDOM = SIZE * 0.10;
     Features.nSPI = 3;
-    int target = CLASSES * Features.nSPI;
-    while (RANDOM != target) {
-        if (RANDOM < target) {
-            RANDOM++;
-        } else {
-            RANDOM--;
-        }
+    while (RANDOM % Features.nSPI != 0) {
+        RANDOM++;
     }
+    
+//    int target = CLASSES * Features.nSPI;
+//    while (RANDOM != target) {
+//        if (RANDOM < target) {
+//            RANDOM++;
+//        } else {
+//            RANDOM--;
+//        }
+//    }
     Features.nRandom = RANDOM;
 
     cout << "Total Samples:\t" << SIZE << endl;
@@ -175,10 +180,10 @@ int main(int argc, char** argv) {
     //calculate_K(Dataset, rSamples, Features);
 
     // Array
-    //readCSV(Dataset, Instances, Features);
-    read_data(Dataset, Instances, Features);
-    select_random(Dataset, Instances, RSelected, Features);
-    nearest_neighbor(Dataset, RSelected, Features);
+    readCSV(Dataset, Instances, Features);
+    //read_data(Dataset, Instances, Features);
+    //select_random(Dataset, Instances, RSelected, Features);
+    //nearest_neighbor(Dataset, RSelected, Features);
     return 0;
 }
 
@@ -276,9 +281,20 @@ void readCSV(float **mSamples, float **mClasses, oData Features) {
                 while (getline(file, line)) {
                     stringstream sLine(line);
                     string word;
+                    int col = 0;
                     while (getline(sLine, word, ',')) {
-                        cout << " " << word << "\t";
+                        //cout << " " << word << "\t";
+                        feature = stof(word);
+                        cout << feature << "\t";
+                        //float rest = feature - ((int) feature);
+                        //if (rest > 0) {
+                          //  feature = round(feature * 100.0 + 0.5) / 100.0;
+                        //}
+                        //mSamples[row][col] = feature;
+                        //cout << mSamples[row][col] << " ";
+                        //col++;
                     }
+                    row++;
                     cout << endl;
                 }
             }
