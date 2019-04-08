@@ -11,9 +11,11 @@
 #include <cmath>
 #include <string.h>
 #include <istream>
+#include <sstream>
 #define SPI 3 
 #define CLS 6
 #define FTS 7
+#define FILE "Data Files/Features.txt"
 
 using namespace std;
 
@@ -110,7 +112,7 @@ int getOdd(int N);
 int getCount(int Min, int Max);
 float standardDeviation(int Size, float Mean, float *vAccuracy);
 //Functions with arrays
-void readCSV(float **mSamples);
+void readCSV(float **mSamples, float **mClasses, oData Features);
 void read_data(float **mSamples, float **mClasses, oData Features);
 void count_instances(float **mSamples, float **mClasses, oData Features);
 void show_data(float **mSamples, int ROWS, int COLS);
@@ -173,6 +175,7 @@ int main(int argc, char** argv) {
     //calculate_K(Dataset, rSamples, Features);
 
     // Array
+    //readCSV(Dataset, Instances, Features);
     read_data(Dataset, Instances, Features);
     select_random(Dataset, Instances, RSelected, Features);
     nearest_neighbor(Dataset, RSelected, Features);
@@ -188,7 +191,7 @@ oData read_features() {
     const char comment = '%';
     oData Features;
     ifstream file;
-    file.open("Data Files/Features.txt", ios::in);
+    file.open(FILE, ios::in);
     if (file.is_open()) {
         string sWord;
         string sClass;
@@ -236,6 +239,55 @@ oData read_features() {
     return Features;
 }
 
+void readCSV(float **mSamples, float **mClasses, oData Features) {
+    int INST = Features.nClasses;
+    int COLS = Features.nFeatures;
+    int ROWS = Features.nSamples;
+    const string attribute = "@attribute";
+    const string oclass = "class";
+    const string oCBracket = "{";
+    const string data = "@data";
+    bool search_data = true;
+    ifstream file;
+    file.open(FILE, ios::in);
+    if (file.is_open()) {
+        cout << "Reading data..." << endl;
+        string sWord;
+        while (search_data) {
+            file >> sWord;
+            if (sWord.compare(attribute) == 0) {
+                file >> sWord;
+                if (sWord.compare(oclass) == 0) {
+                    file >> sWord;
+                    if (sWord.compare(oCBracket) == 0) {
+                        float instance;
+                        for (int i = 0; i < INST; i++) {
+                            file >> instance;
+                            mClasses[i][0] = instance;
+                        }
+                    }
+                }
+            }
+            if (sWord.compare(data) == 0) {
+                search_data = false;
+                float feature;
+                string line;
+                int row = 0;
+                while (getline(file, line)) {
+                    stringstream sLine(line);
+                    string word;
+                    while (getline(sLine, word, ',')) {
+                        cout << " " << word << "\t";
+                    }
+                    cout << endl;
+                }
+            }
+        }
+        file.close();
+        //show_data(mSamples, ROWS, COLS);
+    }
+}
+
 void read_data(float **mSamples, float **mClasses, oData Features) {
     int INST = Features.nClasses;
     int COLS = Features.nFeatures;
@@ -246,7 +298,7 @@ void read_data(float **mSamples, float **mClasses, oData Features) {
     const string data = "@data";
     bool search_data = true;
     ifstream file;
-    file.open("Data Files/Features.txt", ios::in);
+    file.open(FILE, ios::in);
     if (file.is_open()) {
         string sWord;
         cout << "Reading data..." << endl;
@@ -506,6 +558,7 @@ int bestK(float **mDistances, float sClass, int gSize, oData Features) {
     cout << "\t\t----- New Sample -----" << endl;
     cout << "----- Values -----" << endl;
     cout << "Class:\t" << sClass << endl;
+    cout << "Group Size:\t" << gSize << endl;
     cout << "Max K value:\t" << Kmax << endl;
     cout << "N numbers:\t" << nSize << endl;
     float accuracy[nSize], tolerance[nSize];
