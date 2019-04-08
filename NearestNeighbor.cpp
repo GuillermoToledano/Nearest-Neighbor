@@ -16,7 +16,7 @@
 #define SPI 3 
 #define CLS 6
 #define FTS 7
-#define FILE "Data Files/Iris.csv"
+#define FILE "Data Files/Features.csv"
 
 using namespace std;
 
@@ -136,18 +136,17 @@ int main(int argc, char** argv) {
     int SIZE = Features.nSamples;
     int RANDOM = SIZE * 0.10;
     Features.nSPI = 3;
-    while (RANDOM % Features.nSPI != 0) {
-        RANDOM++;
+    //while (RANDOM % Features.nSPI != 0) {
+    //  RANDOM++;
+    //}
+    int target = CLASSES * Features.nSPI;
+    while (RANDOM != target) {
+        if (RANDOM < target) {
+            RANDOM++;
+        } else {
+            RANDOM--;
+        }
     }
-    
-//    int target = CLASSES * Features.nSPI;
-//    while (RANDOM != target) {
-//        if (RANDOM < target) {
-//            RANDOM++;
-//        } else {
-//            RANDOM--;
-//        }
-//    }
     Features.nRandom = RANDOM;
 
     cout << "Total Samples:\t" << SIZE << endl;
@@ -182,8 +181,8 @@ int main(int argc, char** argv) {
     // Array
     readCSV(Dataset, Instances, Features);
     //read_data(Dataset, Instances, Features);
-    //select_random(Dataset, Instances, RSelected, Features);
-    //nearest_neighbor(Dataset, RSelected, Features);
+    select_random(Dataset, Instances, RSelected, Features);
+    nearest_neighbor(Dataset, RSelected, Features);
     return 0;
 }
 
@@ -240,6 +239,7 @@ oData read_features() {
         Features.nFeatures = nFeatures;
         Features.nSamples = nSamples;
         Features.nClasses = nInstances;
+        file.close();
     }
     return Features;
 }
@@ -279,28 +279,29 @@ void readCSV(float **mSamples, float **mClasses, oData Features) {
                 string line;
                 int row = 0;
                 while (getline(file, line)) {
+                    if (line.empty() || line.length() < 2) {
+                        continue;
+                    }
                     stringstream sLine(line);
                     string word;
                     int col = 0;
                     while (getline(sLine, word, ',')) {
-                        //cout << " " << word << "\t";
                         feature = stof(word);
-                        cout << feature << "\t";
-                        //float rest = feature - ((int) feature);
-                        //if (rest > 0) {
-                          //  feature = round(feature * 100.0 + 0.5) / 100.0;
-                        //}
-                        //mSamples[row][col] = feature;
-                        //cout << mSamples[row][col] << " ";
-                        //col++;
+                        float rest = feature - ((int) feature);
+                        if (rest > 0) {
+                            feature = round(feature * 100.0 + 0.5) / 100.0;
+                        }
+                        mSamples[row][col] = feature;
+                        col++;
                     }
                     row++;
-                    cout << endl;
                 }
             }
         }
         file.close();
-        //show_data(mSamples, ROWS, COLS);
+        count_instances(mSamples, mClasses, Features);
+        show_instances(mClasses, INST, 2);
+        show_data(mSamples, ROWS, COLS);
     }
 }
 
@@ -354,6 +355,7 @@ void read_data(float **mSamples, float **mClasses, oData Features) {
                 }
             }
         }
+        file.close();
         count_instances(mSamples, mClasses, Features);
         show_instances(mClasses, INST, 2);
         show_data(mSamples, ROWS, COLS);
@@ -361,7 +363,7 @@ void read_data(float **mSamples, float **mClasses, oData Features) {
 }
 
 void show_data(float **mSamples, int ROWS, int COLS) {
-    cout << "\t\t---------- Dataset ----------" << endl;
+    cout << "\t---------- Dataset ----------" << endl;
     for (int row = 0; row < ROWS; row++) {
         cout << "[" << row << "]" << "\t";
         for (int col = 0; col < COLS; col++) {
