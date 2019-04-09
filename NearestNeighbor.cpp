@@ -13,10 +13,7 @@
 #include <istream>
 #include <sstream>
 #include <string>
-#define SPI 3 
-#define CLS 6
-#define FTS 7
-#define FILE "Data Files/Features.csv"
+#define FILE "Data Files/Iris.csv"
 
 using namespace std;
 
@@ -107,11 +104,12 @@ void select_random(float **mSamples, float **mClasses, float **mRandom, oData Fe
 void show_random(float **mRandom, int ROWS, int COLS);
 void nearest_neighbor(float **mSamples, float **mRandom, oData Features);
 void toArray(float **mSamples, float *vSample, int Row, int Col);
-void zeros(float **nDistances, int Rows);
 float Euclidean(float *rVector, float *sVector, int Features);
 void sort_data(float **vDistances, int Rows);
 void show_distances(float **vDistances, int Rows);
-int bestK(float **mDistances, float sClass, int gSize, oData Features);
+int select_K(float **mDistances, float sClass, int gSize);
+int getOdd(int N);
+int getCount(int Min, int Max);
 
 int main(int argc, char** argv) {
     Features = read_features();
@@ -144,7 +142,7 @@ int main(int argc, char** argv) {
     }
     float** RSelected = new float*[RANDOM];
     for (int i = 0; i < RANDOM; i++) {
-        RSelected[i] = new float[FEATURES + 2];
+        RSelected[i] = new float[FEATURES + 3];
     }
     float** Instances = new float*[CLASSES];
     for (int i = 0; i < CLASSES; i++) {
@@ -155,6 +153,7 @@ int main(int argc, char** argv) {
     //read_data(Dataset, Instances, Features);
     select_random(Dataset, Instances, RSelected, Features);
     nearest_neighbor(Dataset, RSelected, Features);
+    show_random(RSelected, RANDOM, FEATURES + 3);
     return 0;
 }
 
@@ -419,7 +418,7 @@ void select_random(float **mSamples, float **mClasses, float **mRandom, oData Fe
             }
         }
     }
-    show_random(mRandom, RNDM, COLS + 2);
+    show_random(mRandom, RNDM, COLS + 3);
 }
 
 void show_random(float **mRandom, int ROWS, int COLS) {
@@ -469,7 +468,8 @@ void nearest_neighbor(float **mSamples, float **mRandom, oData Features) {
         }
         sort_data(vDistances, nSamples - 1);
         grSize = vRandom[nFeatures + 1];
-        K = bestK(vDistances, current_class, grSize, Features);
+        K = select_K(vDistances, current_class, grSize);
+        mRandom[rand_row][nFeatures + 2] = K;
         rand_row++;
     }
 }
@@ -523,10 +523,8 @@ void show_distances(float **vDistances, int Rows) {
     }
 }
 
-int bestK(float **mDistances, float sClass, int gSize, oData Features) {
-    int nSamples = Features.nSamples;
-    int nRandoms = Features.nRandom;
-    int nSize;
+int select_K(float **mDistances, float sClass, int gSize) {
+    int nNumbers;
     int success;
     int Kmin = 5;
     float weight;
@@ -537,14 +535,16 @@ int bestK(float **mDistances, float sClass, int gSize, oData Features) {
     if (Kmax % 2 == 0) {
         Kmax = getOdd(Kmax);
     }
-    nSize = getCount(Kmin, Kmax);
+    nNumbers = getCount(Kmin, Kmax);
+    float weights[nNumbers];
+    int kvalues[nNumbers];
+    int index = 0;
     cout << "\t\t----- New Sample -----" << endl;
     cout << "----- Values -----" << endl;
     cout << "Class:\t" << sClass << endl;
     cout << "Group Size:\t" << gSize << endl;
     cout << "Max K value:\t" << Kmax << endl;
-    cout << "N numbers:\t" << nSize << endl;
-    float accuracy[nSize], tolerance[nSize];
+    cout << "N numbers:\t" << nNumbers << endl;
     cout << "\t--------- Measures ---------" << endl;
     while (Kmin <= Kmax) {
         success = 0;
@@ -568,10 +568,22 @@ int bestK(float **mDistances, float sClass, int gSize, oData Features) {
                 " Tolerance: " << sTolerance << "\t"
                 " Impact: " << impact << "\t"
                 " Weight: " << weight << endl;
-
+        kvalues[index] = Kmin;
         Kmin += 2;
+        weights[index] = weight;
+        index++;
     }
+    float KV = 0;
+    int K;
+    for (int i = 0; i < nNumbers; i++) {
+        if (weights[i] > KV) {
+            KV = weights[i];
+            K = kvalues[i];
+        }
+    }
+    cout << "Selected K: " << K << " Value: " << KV << endl;
     cout << endl;
+    return K;
 }
 
 int getOdd(int N) {
