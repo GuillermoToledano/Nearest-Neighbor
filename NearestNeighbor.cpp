@@ -13,7 +13,7 @@
 #include <istream>
 #include <sstream>
 #include <string>
-#define FILE "Data Files/Iris.csv"
+#define FILE "Data Files/Glass.csv"
 
 using namespace std;
 
