@@ -13,7 +13,7 @@
 #include <istream>
 #include <sstream>
 #include <string>
-#define FILE "Data Files/Glass.csv"
+#define FILE "Data Files/Features.csv"
 
 using namespace std;
 
@@ -104,7 +104,7 @@ void select_random(float **mSamples, float **mClasses, float **mRandom, oData Fe
 void show_random(float **mRandom, int ROWS, int COLS);
 void nearest_neighbor(float **mSamples, float **mRandom, oData Features);
 void toArray(float **mSamples, float *vSample, int Row, int Col);
-float Euclidean(float *rVector, float *sVector, int Features);
+float Euclidean(float *rVector, float *sVector, int Size);
 void sort_data(float **vDistances, int Rows);
 void show_distances(float **vDistances, int Rows);
 int select_K(float **mDistances, float sClass, int gSize);
@@ -461,7 +461,7 @@ void nearest_neighbor(float **mSamples, float **mRandom, oData Features) {
             if (vRandom[nFeatures] == i) {
                 continue;
             }
-            vDistance = Euclidean(vRandom, vSample, nFeatures);
+            vDistance = Euclidean(vRandom, vSample, nFeatures - 1);
             vDistances[count][0] = vDistance;
             vDistances[count][1] = vSample[nFeatures - 1];
             count++;
@@ -480,10 +480,10 @@ void toArray(float **mSamples, float *vSample, int Row, int Col) {
     }
 }
 
-float Euclidean(float *rVector, float *sVector, int Features) {
-    int Sum, Dist, X, Y, S;
+float Euclidean(float *rVector, float *sVector, int Size) {
+    float Sum, Dist, X, Y, S;
     Sum = 0;
-    for (int i = 0; i < Features - 1; i++) {
+    for (int i = 0; i < Size; i++) {
         X = rVector[i];
         Y = sVector[i];
         S = X - Y;
@@ -610,4 +610,17 @@ float standardDeviation(int Size, float Mean, float *vAccuracy) {
     StDev = Sum / (Size - 1);
     StDev = sqrtf(StDev);
     return StDev;
+}
+
+float Manhattan(float *cVector, float *sVector, int Size) {
+    float Sum, X, Y, S;
+    Sum = 0;
+    for (int i = 0; i < Size; i++) {
+        X = cVector[i];
+        Y = sVector[i];
+        S = X - Y;
+        S = abs(S);
+        Sum = Sum + S;
+    }
+    return Sum;
 }
