@@ -14,6 +14,7 @@
 #include <sstream>
 #include <string>
 #define FILE "Data Files/Features.csv"
+#define RFILE "Data Files/NN-Results.txt"
 
 using namespace std;
 
@@ -110,6 +111,9 @@ void show_distances(float **vDistances, int Rows);
 int select_K(float **mDistances, float sClass, int gSize);
 int getOdd(int N);
 int getCount(int Min, int Max);
+float Manhattan(float *cVector, float *sVector, int Size);
+void write_data(float **Data, oData Features, int Mode);
+void write_results(float *Data, int Cols, int Mode);
 
 int main(int argc, char** argv) {
     Features = read_features();
@@ -149,11 +153,15 @@ int main(int argc, char** argv) {
         Instances[i] = new float[2];
     }
     // Two-dimensional Array
+    write_data(Dataset, Features, 1);
     readCSV(Dataset, Instances, Features);
     //read_data(Dataset, Instances, Features);
     select_random(Dataset, Instances, RSelected, Features);
     nearest_neighbor(Dataset, RSelected, Features);
     show_random(RSelected, RANDOM, FEATURES + 3);
+
+    int fold_size = SIZE / 10;
+    cout << "Fold Size: " << fold_size << endl;
     return 0;
 }
 
@@ -271,8 +279,9 @@ void readCSV(float **mSamples, float **mClasses, oData Features) {
         }
         file.close();
         count_instances(mSamples, mClasses, Features);
-        show_instances(mClasses, INST, 2);
+        //show_instances(mClasses, INST, 2);
         show_data(mSamples, ROWS, COLS);
+        write_data(mSamples, Features, 3);
     }
 }
 
@@ -370,6 +379,8 @@ void count_instances(float **mSamples, float **mClasses, oData Features) {
         }
         mClasses[ins][1] = count;
     }
+    write_data(mClasses, Features, 2);
+    show_instances(mClasses, nInstances, 2);
 }
 
 void show_instances(float **mInstances, int ROWS, int COLS) {
@@ -418,6 +429,7 @@ void select_random(float **mSamples, float **mClasses, float **mRandom, oData Fe
             }
         }
     }
+    write_data(mRandom, Features, 4);
     show_random(mRandom, RNDM, COLS + 3);
 }
 
@@ -538,21 +550,30 @@ int select_K(float **mDistances, float sClass, int gSize) {
     nNumbers = getCount(Kmin, Kmax);
     float weights[nNumbers];
     int kvalues[nNumbers];
-    int index = 0;
+    float results[10];
+    int index = 0, cont;
     cout << "\t\t----- New Sample -----" << endl;
     cout << "----- Values -----" << endl;
     cout << "Class:\t" << sClass << endl;
     cout << "Group Size:\t" << gSize << endl;
     cout << "Max K value:\t" << Kmax << endl;
     cout << "N numbers:\t" << nNumbers << endl;
+    results[0] = sClass;
+    results[1] = gSize;
+    results[2] = Kmax;
+    results[3] = nNumbers;
+    write_results(results,0,1);
     cout << "\t--------- Measures ---------" << endl;
     while (Kmin <= Kmax) {
         success = 0;
+        cont = 4;
+        results[cont] = Kmin;
         for (int i = 0; i < Kmin; i++) {
             if (mDistances[i][1] == sClass) {
                 success++;
             }
         }
+        results[++cont] = success;
         impact = logf(Kmin);
         sAccuracy = (float) success / Kmin;
         sTolerance = (float) (success - 1) / Kmin;
@@ -568,20 +589,25 @@ int select_K(float **mDistances, float sClass, int gSize) {
                 " Tolerance: " << sTolerance << "\t"
                 " Impact: " << impact << "\t"
                 " Weight: " << weight << endl;
+        results[++cont] = sAccuracy;
+        results[++cont] = sTolerance;
+        results[++cont] = impact;
+        results[++cont] = weight;
         kvalues[index] = Kmin;
         Kmin += 2;
         weights[index] = weight;
         index++;
+        write_results(results,10,2);
     }
-    float KV = 0;
+    float KWeight = 0;
     int K;
     for (int i = 0; i < nNumbers; i++) {
-        if (weights[i] > KV) {
-            KV = weights[i];
+        if (weights[i] > KWeight) {
+            KWeight = weights[i];
             K = kvalues[i];
         }
     }
-    cout << "Selected K: " << K << " Value: " << KV << endl;
+    cout << "Selected K: " << K << " Value: " << KWeight << endl;
     cout << endl;
     return K;
 }
@@ -623,4 +649,73 @@ float Manhattan(float *cVector, float *sVector, int Size) {
         Sum = Sum + S;
     }
     return Sum;
+}
+
+void write_data(float **Data, oData Features, int Mode) {
+    ofstream file;
+    switch (Mode) {
+        case 1:
+            file.open(RFILE, ios::out);
+            file << "Total Samples:  " << Features.nSamples << endl;
+            file << "Total Features: " << Features.nFeatures << endl;
+            file << "Total Classes:  " << Features.nClasses << endl;
+            file << "Total Random:   " << Features.nRandom << endl;
+            file << "Samples per Instance: " << Features.nSPI << endl;
+            file.close();
+            break;
+        case 2:
+            file.open(RFILE, ios::out | ios::app);
+            file << "@Instances" << endl;
+            for (int i = 0; i < Features.nClasses; i++) {
+                file << "[" << i << "] " << Data[i][0] << " " << Data[i][1] << endl;
+            }
+            file.close();
+            break;
+        case 3:
+            file.open(RFILE, ios::out | ios::app);
+            file << "@Data" << endl;
+            for (int i = 0; i < Features.nSamples; i++) {
+                file << "[" << i << "] ";
+                for (int j = 0; j < Features.nFeatures; j++) {
+                    file << Data[i][j] << " ";
+                }
+                file << endl;
+            }
+            file.close();
+            break;
+        case 4:
+            file.open(RFILE, ios::out | ios::app);
+            file << "@Random" << endl;
+            for (int i = 0; i < Features.nRandom; i++) {
+                file << "[" << i << "] ";
+                for (int j = 0; j < Features.nFeatures + 3; j++) {
+                    file << Data[i][j] << " ";
+                }
+                file << endl;
+            }
+            file.close();
+            break;
+    }
+}
+
+void write_results(float *Data, int Cols, int Mode) {
+    ofstream file;
+    file.open(RFILE, ios::out | ios::app);
+    switch (Mode) {
+        case 1:
+            file << "@Values" << endl;
+            file << "Class:       " << Data[0] << endl;
+            file << "Group Size:  " << Data[1] << endl;
+            file << "Max K Value: " << Data[2] << endl;
+            file << "K Numbers:   " << Data[3] << endl;
+            file << "@Measures" << endl;
+            break;
+        case 2:
+            for (int i = 4; i < Cols; i++) {
+                file << Data[i] << " ";
+            }
+            file << endl;
+            break;
+    }
+    file.close();
 }
