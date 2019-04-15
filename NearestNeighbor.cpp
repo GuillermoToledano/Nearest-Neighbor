@@ -15,6 +15,8 @@
 #include <string>
 #define FILE "Data Files/Features.csv"
 #define RFILE "Data Files/NN-Results.txt"
+#define TFFILE "Data Files/TF-Results.txt"
+#define FOLDS 10
 
 using namespace std;
 
@@ -114,6 +116,7 @@ int getCount(int Min, int Max);
 float Manhattan(float *cVector, float *sVector, int Size);
 void write_data(float **Data, oData Features, int Mode);
 void write_results(float *Data, int Cols, int Mode);
+void getFold(float **Dataset, float *Fold, int ROW, int COLS);
 
 int main(int argc, char** argv) {
     Features = read_features();
@@ -122,9 +125,6 @@ int main(int argc, char** argv) {
     int SIZE = Features.nSamples;
     int RANDOM = SIZE * 0.10;
     Features.nSPI = 3;
-    //while (RANDOM % Features.nSPI != 0) {
-    //  RANDOM++;
-    //}
     int target = CLASSES * Features.nSPI;
     while (RANDOM != target) {
         if (RANDOM < target) {
@@ -152,16 +152,23 @@ int main(int argc, char** argv) {
     for (int i = 0; i < CLASSES; i++) {
         Instances[i] = new float[2];
     }
-    // Two-dimensional Array
-    write_data(Dataset, Features, 1);
+    // Two-dimensional Array Operations
     readCSV(Dataset, Instances, Features);
-    //read_data(Dataset, Instances, Features);
     select_random(Dataset, Instances, RSelected, Features);
     nearest_neighbor(Dataset, RSelected, Features);
     show_random(RSelected, RANDOM, FEATURES + 3);
 
+    //Ten Fold Cross Validation
     int fold_size = SIZE / 10;
     cout << "Fold Size: " << fold_size << endl;
+    float** Fold = new float*[fold_size];
+    for (int i = 0; i < fold_size; i++ ) {
+        Fold[i] = new float[FEATURES + 1];
+    }
+    int fold_cont = 0, current_row = 0;
+    while (fold_cont < FOLDS) {
+        
+    }
     return 0;
 }
 
@@ -281,7 +288,7 @@ void readCSV(float **mSamples, float **mClasses, oData Features) {
         count_instances(mSamples, mClasses, Features);
         //show_instances(mClasses, INST, 2);
         show_data(mSamples, ROWS, COLS);
-        write_data(mSamples, Features, 3);
+        //write_data(mSamples, Features, 3);
     }
 }
 
@@ -379,7 +386,7 @@ void count_instances(float **mSamples, float **mClasses, oData Features) {
         }
         mClasses[ins][1] = count;
     }
-    write_data(mClasses, Features, 2);
+    //write_data(mClasses, Features, 2);
     show_instances(mClasses, nInstances, 2);
 }
 
@@ -429,7 +436,7 @@ void select_random(float **mSamples, float **mClasses, float **mRandom, oData Fe
             }
         }
     }
-    write_data(mRandom, Features, 4);
+    //write_data(mRandom, Features, 4);
     show_random(mRandom, RNDM, COLS + 3);
 }
 
@@ -550,30 +557,30 @@ int select_K(float **mDistances, float sClass, int gSize) {
     nNumbers = getCount(Kmin, Kmax);
     float weights[nNumbers];
     int kvalues[nNumbers];
-    float results[10];
-    int index = 0, cont;
+    //float results[10];
+    int index = 0; //cont;
     cout << "\t\t----- New Sample -----" << endl;
     cout << "----- Values -----" << endl;
     cout << "Class:\t" << sClass << endl;
     cout << "Group Size:\t" << gSize << endl;
     cout << "Max K value:\t" << Kmax << endl;
     cout << "N numbers:\t" << nNumbers << endl;
-    results[0] = sClass;
-    results[1] = gSize;
-    results[2] = Kmax;
-    results[3] = nNumbers;
-    write_results(results,0,1);
+    //results[0] = sClass;
+    //results[1] = gSize;
+    //results[2] = Kmax;
+    //results[3] = nNumbers;
+    //write_results(results,0,1);
     cout << "\t--------- Measures ---------" << endl;
     while (Kmin <= Kmax) {
         success = 0;
-        cont = 4;
-        results[cont] = Kmin;
+        //cont = 4;
+        //results[cont] = Kmin;
         for (int i = 0; i < Kmin; i++) {
             if (mDistances[i][1] == sClass) {
                 success++;
             }
         }
-        results[++cont] = success;
+        //results[cont++] = success;
         impact = logf(Kmin);
         sAccuracy = (float) success / Kmin;
         sTolerance = (float) (success - 1) / Kmin;
@@ -589,15 +596,15 @@ int select_K(float **mDistances, float sClass, int gSize) {
                 " Tolerance: " << sTolerance << "\t"
                 " Impact: " << impact << "\t"
                 " Weight: " << weight << endl;
-        results[++cont] = sAccuracy;
-        results[++cont] = sTolerance;
-        results[++cont] = impact;
-        results[++cont] = weight;
+        //results[cont++] = sAccuracy;
+        //results[cont++] = sTolerance;
+        //results[cont++] = impact;
+        //results[cont++] = weight;
         kvalues[index] = Kmin;
         Kmin += 2;
         weights[index] = weight;
         index++;
-        write_results(results,10,2);
+        //write_results(results,10,2);
     }
     float KWeight = 0;
     int K;
@@ -718,4 +725,8 @@ void write_results(float *Data, int Cols, int Mode) {
             break;
     }
     file.close();
+}
+
+void getFold(float **Dataset, float *Fold, int ROW, int COLS) {
+    
 }
