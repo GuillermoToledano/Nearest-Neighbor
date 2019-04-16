@@ -20,73 +20,6 @@
 
 using namespace std;
 
-/** 
- * Object Class
- *  
- * oBall1 = 1
- * oBall2 = 2
- * oCD1   = 3
- * oCD2   = 4
- * oCD3   = 5
- * oCD4   = 6
- */
-enum oClass {
-    oBall1 = 1,
-    oBall2 = 2,
-    oCD1 = 3,
-    oCD2 = 4,
-    oCD3 = 5,
-    oBall6 = 6
-};
-
-/** 
- * Object Features 
- * @Radio Estimated object's radio.
- * @Ratio Width-Height relation
- * @White Object's white percentage
- * @Black Object's black percentage
- * @Green Object's green percentage
- * @BwotG Object's black without green percentage
- */
-struct oFeatures {
-    double Radio;
-    double Ratio;
-    double White;
-    double Black;
-    double BoutG;
-    double Green;
-};
-
-/** 
- * Object Sample 
- * @Features From oFeatures struct
- * @Class From oClass struct
- */
-struct oSample {
-    oFeatures Features;
-    oClass Class;
-};
-
-struct oRSample {
-    oSample Sample;
-    int Index;
-};
-
-/** 
- * Object Sample K
- * @Sample From oSample struct
- * @K Assigned K value 
- */
-struct oKSample {
-    oSample Sample;
-    int K;
-};
-
-struct oDist {
-    oClass Class;
-    int Distance;
-};
-
 struct oData {
     int nSamples;
     int nFeatures;
@@ -165,9 +98,9 @@ int main(int argc, char** argv) {
     for (int i = 0; i < fold_size; i++ ) {
         Fold[i] = new float[FEATURES + 1];
     }
-    int fold_cont = 0, current_row = 0;
+    int fold_cont = 0, current_row = 0, current_col = FEATURES+1;
     while (fold_cont < FOLDS) {
-        
+        getFold(Dataset, Fold, current_row, current_col);
     }
     return 0;
 }
