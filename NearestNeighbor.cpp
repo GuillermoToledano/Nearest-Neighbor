@@ -663,13 +663,15 @@ void write_results(float *Data, int Cols, int Mode) {
 }
 
 void getFold(float **Dataset, float **Fold, int Row, int Col, int foldSize) {
-    int limit = Row + foldSize;
+    int limit = Row + foldSize, indx = -1;
     cout << "Current Row: " << Row << endl;
     cout << "Limit: " << limit << endl;
     for (int r = Row; r < limit; r++) {
+        indx++;
         for (int c = 0; c < Col; c++) {
-            Fold[r][c] = Dataset[r][c];
+            Fold[indx][c] = Dataset[r][c];
         }
     }
+    //cout << "Index reached: " << indx << endl;
     show_data(Fold, foldSize, Col);
 }
