@@ -49,7 +49,7 @@ int getCount(int Min, int Max);
 float Manhattan(float *cVector, float *sVector, int Size);
 void write_data(float **Data, oData Features, int Mode);
 void write_results(float *Data, int Cols, int Mode);
-void getFold(float **Dataset, float *Fold, int ROW, int COLS);
+void getFold(float **Dataset, float **Fold, int Row, int Col, int foldSize);
 
 int main(int argc, char** argv) {
     Features = read_features();
@@ -98,9 +98,11 @@ int main(int argc, char** argv) {
     for (int i = 0; i < fold_size; i++ ) {
         Fold[i] = new float[FEATURES + 1];
     }
-    int fold_cont = 0, current_row = 0, current_col = FEATURES+1;
+    int fold_cont = 0, current_row = 0, current_col = FEATURES;
     while (fold_cont < FOLDS) {
-        getFold(Dataset, Fold, current_row, current_col);
+        getFold(Dataset, Fold, current_row, current_col, fold_size);
+        current_row += fold_size;
+        fold_cont++;
     }
     return 0;
 }
@@ -660,6 +662,14 @@ void write_results(float *Data, int Cols, int Mode) {
     file.close();
 }
 
-void getFold(float **Dataset, float *Fold, int ROW, int COLS) {
-    
+void getFold(float **Dataset, float **Fold, int Row, int Col, int foldSize) {
+    int limit = Row + foldSize;
+    cout << "Current Row: " << Row << endl;
+    cout << "Limit: " << limit << endl;
+    for (int r = Row; r < limit; r++) {
+        for (int c = 0; c < Col; c++) {
+            Fold[r][c] = Dataset[r][c];
+        }
+    }
+    show_data(Fold, foldSize, Col);
 }
