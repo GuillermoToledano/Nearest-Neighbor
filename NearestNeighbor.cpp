@@ -26,6 +26,7 @@ struct oData {
     int nClasses;
     int nRandom;
     int nSPI;
+    int nFold;
 } Features;
 
 // Prototypes - Functions with two-dimensional arrays
@@ -34,7 +35,7 @@ oData count_samples();
 void readCSV(float **mSamples, float **mClasses, oData Features);
 void read_data(float **mSamples, float **mClasses, oData Features);
 void count_instances(float **mSamples, float **mClasses, oData Features);
-void show_data(float **mSamples, int ROWS, int COLS);
+void show_data(float **mSamples, int ROWS, int COLS, int Mode);
 void show_instances(float **mClasses, int ROWS, int COLS);
 void select_random(float **mSamples, float **mClasses, float **mRandom, oData Features);
 void show_random(float **mRandom, int ROWS, int COLS);
@@ -50,6 +51,7 @@ float Manhattan(float *cVector, float *sVector, int Size);
 void write_data(float **Data, oData Features, int Mode);
 void write_results(float *Data, int Cols, int Mode);
 void getFold(float **Dataset, float **Fold, int Row, int Col, int foldSize);
+void similarity_k(float **Random, float **Fold, oData Features);
 
 int main(int argc, char** argv) {
     Features = read_features();
@@ -93,14 +95,16 @@ int main(int argc, char** argv) {
 
     //Ten Fold Cross Validation
     int fold_size = SIZE / 10;
+    Features.nFold = fold_size;
     cout << "Fold Size: " << fold_size << endl;
     float** Fold = new float*[fold_size];
-    for (int i = 0; i < fold_size; i++ ) {
-        Fold[i] = new float[FEATURES + 1];
+    for (int i = 0; i < fold_size; i++) {
+        Fold[i] = new float[FEATURES + 3];
     }
     int fold_cont = 0, current_row = 0, current_col = FEATURES;
     while (fold_cont < FOLDS) {
         getFold(Dataset, Fold, current_row, current_col, fold_size);
+        similarity_k(RSelected, Fold, Features);
         current_row += fold_size;
         fold_cont++;
     }
@@ -222,7 +226,7 @@ void readCSV(float **mSamples, float **mClasses, oData Features) {
         file.close();
         count_instances(mSamples, mClasses, Features);
         //show_instances(mClasses, INST, 2);
-        show_data(mSamples, ROWS, COLS);
+        show_data(mSamples, ROWS, COLS, 1);
         //write_data(mSamples, Features, 3);
     }
 }
@@ -280,12 +284,19 @@ void read_data(float **mSamples, float **mClasses, oData Features) {
         file.close();
         count_instances(mSamples, mClasses, Features);
         show_instances(mClasses, INST, 2);
-        show_data(mSamples, ROWS, COLS);
+        show_data(mSamples, ROWS, COLS, 1);
     }
 }
 
-void show_data(float **mSamples, int ROWS, int COLS) {
-    cout << "\t---------- Dataset ----------" << endl;
+void show_data(float **mSamples, int ROWS, int COLS, int Mode) {
+    switch (Mode) {
+        case 1:
+            cout << "\t---------- Dataset ----------" << endl;
+            break;
+        case 2:
+            cout << "\t---------- Fold ----------" << endl;
+            break;
+    }
     for (int row = 0; row < ROWS; row++) {
         cout << "[" << row << "]" << "\t";
         for (int col = 0; col < COLS; col++) {
@@ -580,19 +591,6 @@ float standardDeviation(int Size, float Mean, float *vAccuracy) {
     return StDev;
 }
 
-float Manhattan(float *cVector, float *sVector, int Size) {
-    float Sum, X, Y, S;
-    Sum = 0;
-    for (int i = 0; i < Size; i++) {
-        X = cVector[i];
-        Y = sVector[i];
-        S = X - Y;
-        S = abs(S);
-        Sum = Sum + S;
-    }
-    return Sum;
-}
-
 void write_data(float **Data, oData Features, int Mode) {
     ofstream file;
     switch (Mode) {
@@ -664,14 +662,62 @@ void write_results(float *Data, int Cols, int Mode) {
 
 void getFold(float **Dataset, float **Fold, int Row, int Col, int foldSize) {
     int limit = Row + foldSize, indx = -1;
-    cout << "Current Row: " << Row << endl;
-    cout << "Limit: " << limit << endl;
+    //cout << "Current Row: " << Row << endl;
+    //cout << "Limit: " << limit << endl;
     for (int r = Row; r < limit; r++) {
         indx++;
         for (int c = 0; c < Col; c++) {
             Fold[indx][c] = Dataset[r][c];
         }
     }
-    //cout << "Index reached: " << indx << endl;
-    show_data(Fold, foldSize, Col);
+    show_data(Fold, foldSize, Col, 2);
+}
+
+void similarity_k(float **Random, float **Fold, oData Features) {
+    int Col = Features.nFeatures;
+    int rand_size = Features.nRandom;
+    int fold_size = Features.nFold;
+    float vFold[Col + 3] = {};
+    float vRand[Col + 3] = {};
+    float cDist, mDist;
+    int rClass, K;
+    bool first;
+    for (int FRow = 0; FRow < fold_size; FRow++) {
+        toArray(Fold, vFold, FRow, Col + 3);
+        first = true;
+        for (int RRow = 0; RRow < rand_size; RRow++) {
+            toArray(Random, vRand, RRow, Col + 3);
+            cDist = Manhattan(vRand, vFold, Col - 1);
+            if (first) {
+                mDist = cDist;
+                K = vRand[Col + 2];
+                rClass = vRand[Col - 1];
+                first = false;
+            } else {
+                if (cDist < mDist) {
+                    mDist = cDist;
+                    K = vRand[Col + 2];
+                    rClass = vRand[Col - 1];
+                }
+            }
+        }
+        mDist = round(mDist * 100) / 100;
+        Fold[FRow][Col] = rClass;
+        Fold[FRow][Col + 1] = mDist;
+        Fold[FRow][Col + 2] = K;
+    }
+    show_data(Fold, fold_size, Col + 3, 2);
+}
+
+float Manhattan(float *cVector, float *sVector, int Size) {
+    float Sum, X, Y, S;
+    Sum = 0;
+    for (int i = 0; i < Size; i++) {
+        X = cVector[i];
+        Y = sVector[i];
+        S = X - Y;
+        S = abs(S);
+        Sum = Sum + S;
+    }
+    return Sum;
 }
