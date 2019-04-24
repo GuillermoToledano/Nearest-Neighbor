@@ -13,7 +13,7 @@
 #include <istream>
 #include <sstream>
 #include <string>
-#define FILE "Data Files/Features.csv"
+#define FILE "Data Files/Glass.csv"
 #define RFILE "Data Files/NN-Results.txt"
 #define TFFILE "Data Files/TF-Results.txt"
 #define FOLDS 10
@@ -100,6 +100,11 @@ int main(int argc, char** argv) {
     float** Fold = new float*[fold_size];
     for (int i = 0; i < fold_size; i++) {
         Fold[i] = new float[FEATURES + 3];
+    }
+    int train_size = SIZE - fold_size;
+    float** Training = new float*[train_size];
+    for (int i = 0; i < train_size; i++) {
+        Training[i] = new float[FEATURES];
     }
     int fold_cont = 0, current_row = 0, current_col = FEATURES;
     while (fold_cont < FOLDS) {
@@ -662,8 +667,6 @@ void write_results(float *Data, int Cols, int Mode) {
 
 void getFold(float **Dataset, float **Fold, int Row, int Col, int foldSize) {
     int limit = Row + foldSize, indx = -1;
-    //cout << "Current Row: " << Row << endl;
-    //cout << "Limit: " << limit << endl;
     for (int r = Row; r < limit; r++) {
         indx++;
         for (int c = 0; c < Col; c++) {
@@ -720,4 +723,8 @@ float Manhattan(float *cVector, float *sVector, int Size) {
         Sum = Sum + S;
     }
     return Sum;
+}
+
+int KNN(float **trainig, float *vInput) {
+    
 }
