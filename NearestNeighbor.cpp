@@ -13,7 +13,7 @@
 #include <istream>
 #include <sstream>
 #include <string>
-#define FILE "Data Files/Glass.csv"
+#define FILE "Data Files/Features.csv"
 #define RFILE "Data Files/NN-Results.txt"
 #define TFFILE "Data Files/TF-Results.txt"
 #define FOLDS 10
@@ -27,6 +27,7 @@ struct oData {
     int nRandom;
     int nSPI;
     int nFold;
+    int nTraining;
 } Features;
 
 // Prototypes - Functions with two-dimensional arrays
@@ -47,11 +48,12 @@ void show_distances(float **vDistances, int Rows);
 int select_K(float **mDistances, float sClass, int gSize);
 int getOdd(int N);
 int getCount(int Min, int Max);
-float Manhattan(float *cVector, float *sVector, int Size);
 void write_data(float **Data, oData Features, int Mode);
 void write_results(float *Data, int Cols, int Mode);
 void getFold(float **Dataset, float **Fold, int Row, int Col, int foldSize);
 void similarity_k(float **Random, float **Fold, oData Features);
+float Manhattan(float *cVector, float *sVector, int Size);
+void getTraining(float **Dataset, float **Training, oData Features, int Start);
 
 int main(int argc, char** argv) {
     Features = read_features();
@@ -101,15 +103,18 @@ int main(int argc, char** argv) {
     for (int i = 0; i < fold_size; i++) {
         Fold[i] = new float[FEATURES + 3];
     }
-    int train_size = SIZE - fold_size;
-    float** Training = new float*[train_size];
-    for (int i = 0; i < train_size; i++) {
+    int training_size = fold_size * 10 - fold_size;
+    Features.nTraining = training_size;
+    cout << "Training Set Size: " << training_size << endl;
+    float** Training = new float*[training_size];
+    for (int i = 0; i < training_size; i++) {
         Training[i] = new float[FEATURES];
     }
     int fold_cont = 0, current_row = 0, current_col = FEATURES;
     while (fold_cont < FOLDS) {
         getFold(Dataset, Fold, current_row, current_col, fold_size);
         similarity_k(RSelected, Fold, Features);
+        getTraining(Dataset, Training, Features, current_row);
         current_row += fold_size;
         fold_cont++;
     }
@@ -300,6 +305,9 @@ void show_data(float **mSamples, int ROWS, int COLS, int Mode) {
             break;
         case 2:
             cout << "\t---------- Fold ----------" << endl;
+            break;
+        case 3:
+            cout << "\t---------- Training ----------" << endl;
             break;
     }
     for (int row = 0; row < ROWS; row++) {
@@ -673,7 +681,7 @@ void getFold(float **Dataset, float **Fold, int Row, int Col, int foldSize) {
             Fold[indx][c] = Dataset[r][c];
         }
     }
-    show_data(Fold, foldSize, Col, 2);
+    //show_data(Fold, foldSize, Col, 2);
 }
 
 void similarity_k(float **Random, float **Fold, oData Features) {
@@ -725,6 +733,26 @@ float Manhattan(float *cVector, float *sVector, int Size) {
     return Sum;
 }
 
-int KNN(float **trainig, float *vInput) {
-    
+void getTraining(float **Dataset, float **Training, oData Features, int Start) {
+    int End = Start + Features.nFold - 1;
+    int Rows = Features.nFold * 10;
+    int Cols = Features.nFeatures;
+    int trow = -1;
+    cout << "Size: " << Rows << " Start: " << Start << " End: " << End << endl;
+    int row = 0;
+    while (row < Rows) {
+        if (row == Start) {
+            row += Features.nFold;
+        } else {
+            //cout << row << endl;
+            trow++;
+            for (int col = 0; col < Cols; col++) {
+                Training[trow][col] = Dataset[row][col];
+            }
+            row++;
+        }
+    }
+    cout << "Row reached: " << row << " Rows counted: " << trow << endl;
+    Rows = Rows - Features.nFold;
+    show_data(Training, Rows, Cols, 3);
 }
