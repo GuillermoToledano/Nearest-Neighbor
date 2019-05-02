@@ -28,6 +28,7 @@ struct oData {
     int nSPI;
     int nFold;
     int nTraining;
+    int K;
 } Features;
 
 // Prototypes - Functions with two-dimensional arrays
@@ -54,13 +55,14 @@ void getFold(float **Dataset, float **Fold, int Row, int Col, int foldSize);
 void similarity_k(float **Random, float **Fold, oData Features);
 float Manhattan(float *cVector, float *sVector, int Size);
 void getTraining(float **Dataset, float **Training, oData Features, int Start);
+int KNN(float **Training, float **Classes, float *Fold, oData Features, int K);
 
 int main(int argc, char** argv) {
     Features = read_features();
-    int FEATURES = Features.nFeatures;
+    int COLS = Features.nFeatures;
     int CLASSES = Features.nClasses;
-    int SIZE = Features.nSamples;
-    int RANDOM = SIZE * 0.10;
+    int ROWS = Features.nSamples;
+    int RANDOM = ROWS * 0.10;
     Features.nSPI = 3;
     int target = CLASSES * Features.nSPI;
     while (RANDOM != target) {
@@ -72,18 +74,18 @@ int main(int argc, char** argv) {
     }
     Features.nRandom = RANDOM;
 
-    cout << "Total Samples:\t" << SIZE << endl;
-    cout << "Total Features:\t" << FEATURES << endl;
+    cout << "Total Samples:\t" << ROWS << endl;
+    cout << "Total Features:\t" << COLS << endl;
     cout << "Total Classes:\t" << CLASSES << endl;
     cout << "Random Samples:\t" << RANDOM << endl;
     //Arrays
-    float** Dataset = new float*[SIZE];
-    for (int i = 0; i < SIZE; i++) {
-        Dataset[i] = new float[FEATURES];
+    float** Dataset = new float*[ROWS];
+    for (int i = 0; i < ROWS; i++) {
+        Dataset[i] = new float[COLS];
     }
     float** RSelected = new float*[RANDOM];
     for (int i = 0; i < RANDOM; i++) {
-        RSelected[i] = new float[FEATURES + 3];
+        RSelected[i] = new float[COLS + 3];
     }
     float** Instances = new float*[CLASSES];
     for (int i = 0; i < CLASSES; i++) {
@@ -93,28 +95,43 @@ int main(int argc, char** argv) {
     readCSV(Dataset, Instances, Features);
     select_random(Dataset, Instances, RSelected, Features);
     nearest_neighbor(Dataset, RSelected, Features);
-    show_random(RSelected, RANDOM, FEATURES + 3);
+    show_random(RSelected, RANDOM, COLS + 3);
 
     //Ten Fold Cross Validation
-    int fold_size = SIZE / 10;
+    int fold_size = ROWS / 10;
     Features.nFold = fold_size;
     cout << "Fold Size: " << fold_size << endl;
     float** Fold = new float*[fold_size];
     for (int i = 0; i < fold_size; i++) {
-        Fold[i] = new float[FEATURES + 3];
+        Fold[i] = new float[COLS + 4];
     }
     int training_size = fold_size * 10 - fold_size;
     Features.nTraining = training_size;
     cout << "Training Set Size: " << training_size << endl;
     float** Training = new float*[training_size];
     for (int i = 0; i < training_size; i++) {
-        Training[i] = new float[FEATURES];
+        Training[i] = new float[COLS];
     }
-    int fold_cont = 0, current_row = 0, current_col = FEATURES;
+    float **vDistances = new float *[training_size];
+    for (int i = 0; i < training_size; i++) {
+        vDistances[i] = new float[2];
+    }
+    int K, oClass;
+    float vFold[COLS + 3] = {};
+    int fold_cont = 0, current_row = 0, current_col = COLS + 3;
     while (fold_cont < FOLDS) {
         getFold(Dataset, Fold, current_row, current_col, fold_size);
         similarity_k(RSelected, Fold, Features);
         getTraining(Dataset, Training, Features, current_row);
+
+        for (int f_row = 0; f_row < fold_size; f_row++) {
+            toArray(Fold, vFold, f_row, current_col);
+            K = vFold[current_col - 1];
+            oClass = KNN(Training, Instances, vFold, Features, K);
+            Fold[f_row][COLS + 3] = oClass;
+            cout << "Returned Class: " << Fold[f_row][COLS+3] << endl;
+            cout << endl;
+        }
         current_row += fold_size;
         fold_cont++;
     }
@@ -734,17 +751,15 @@ float Manhattan(float *cVector, float *sVector, int Size) {
 }
 
 void getTraining(float **Dataset, float **Training, oData Features, int Start) {
-    int End = Start + Features.nFold - 1;
     int Rows = Features.nFold * 10;
     int Cols = Features.nFeatures;
     int trow = -1;
-    cout << "Size: " << Rows << " Start: " << Start << " End: " << End << endl;
+    //cout << "Size: " << Rows << " Start: " << Start << " End: " << End << endl;
     int row = 0;
     while (row < Rows) {
         if (row == Start) {
             row += Features.nFold;
         } else {
-            //cout << row << endl;
             trow++;
             for (int col = 0; col < Cols; col++) {
                 Training[trow][col] = Dataset[row][col];
@@ -752,7 +767,50 @@ void getTraining(float **Dataset, float **Training, oData Features, int Start) {
             row++;
         }
     }
-    cout << "Row reached: " << row << " Rows counted: " << trow << endl;
-    Rows = Rows - Features.nFold;
-    show_data(Training, Rows, Cols, 3);
+    //cout << "Row reached: " << row << " Rows counted: " << trow << endl;
+    //Rows = Rows - Features.nFold;
+    //show_data(Training, Rows, Cols, 3);
+}
+
+int KNN(float **Training, float **Classes, float *vFold, oData Features, int K) {
+    int training_size = Features.nTraining;
+    int total_classes = Features.nClasses;
+    int Cols = Features.nFeatures;
+    int count = 0, current_class;
+    int maxOcurr = 0, oClass;
+    float **vDistances = new float *[training_size];
+    for (int i = 0; i < training_size; i++) {
+        vDistances[i] = new float[2];
+    }
+    float **vClass = new float *[total_classes];
+    for (int i = 0; i < total_classes; i++) {
+        vClass[i] = new float[2];
+    }
+    float vTraining[Cols + 3] = {};
+    for (int TRow = 0; TRow < training_size; TRow++) {
+        toArray(Training, vTraining, TRow, Cols + 3);
+        vDistances[count][0] = Euclidean(vTraining, vFold, Cols - 1);
+        vDistances[count][1] = vTraining[Cols - 1];
+        count++;
+    }
+    sort_data(vDistances, training_size);
+    for (int crow = 0; crow < total_classes; crow++) {
+        current_class = Classes[crow][0];
+        vClass[crow][0] = current_class;
+        count = 0;
+        for (int drow = 0; drow < K; drow++) {
+            if (vDistances[drow][1] == current_class) {
+                count++;
+            }
+        }
+        vClass[crow][1] = count;
+        if (count > maxOcurr) {
+            maxOcurr = count;
+            oClass = current_class;
+        }
+    }
+    cout << "K: " << K << endl;
+    cout << "Class: " << oClass << " Occurrence: " << maxOcurr << endl;
+    show_instances(vClass, total_classes, 2);
+    return oClass;
 }
