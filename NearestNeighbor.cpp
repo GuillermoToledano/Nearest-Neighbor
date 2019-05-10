@@ -56,6 +56,7 @@ void similarity_k(float **Random, float **Fold, oData Features);
 float Manhattan(float *cVector, float *sVector, int Size);
 void getTraining(float **Dataset, float **Training, oData Features, int Start);
 int KNN(float **Training, float **Classes, float *Fold, oData Features, int K);
+void save_results(float **Averages);
 
 int main(int argc, char** argv) {
     Features = read_features();
@@ -103,8 +104,9 @@ int main(int argc, char** argv) {
     cout << "Fold Size: " << fold_size << endl;
     float** Fold = new float*[fold_size];
     for (int i = 0; i < fold_size; i++) {
-        Fold[i] = new float[COLS + 4];
+        Fold[i] = new float[COLS + 3];
     }
+    
     int training_size = fold_size * 10 - fold_size;
     Features.nTraining = training_size;
     cout << "Training Set Size: " << training_size << endl;
@@ -116,25 +118,45 @@ int main(int argc, char** argv) {
     for (int i = 0; i < training_size; i++) {
         vDistances[i] = new float[2];
     }
-    int K, oClass;
+    float **FoldResults = new float *[FOLDS];
+    for (int i = 0; i < FOLDS; i++) {
+        FoldResults[i] = new float[4];
+    }
+    int K, oClass, Hit, nHit;
     float vFold[COLS + 3] = {};
+    float Correct, Incorrect, TError, TAverage = 0.0;
     int fold_cont = 0, current_row = 0, current_col = COLS + 3;
     while (fold_cont < FOLDS) {
         getFold(Dataset, Fold, current_row, current_col, fold_size);
         similarity_k(RSelected, Fold, Features);
         getTraining(Dataset, Training, Features, current_row);
-
+        Hit = 0;
         for (int f_row = 0; f_row < fold_size; f_row++) {
             toArray(Fold, vFold, f_row, current_col);
             K = vFold[current_col - 1];
+            //K = 19;
             oClass = KNN(Training, Instances, vFold, Features, K);
             Fold[f_row][COLS + 3] = oClass;
-            cout << "Returned Class: " << Fold[f_row][COLS+3] << endl;
-            cout << endl;
+            if (Fold[f_row][COLS - 1] == oClass) {
+                Hit++;
+            }
         }
+        nHit = fold_size - Hit;
+        Correct = (float)Hit * 100 / fold_size;   
+        Incorrect = (float)nHit * 100 / fold_size;
+        cout << "Fold Hits: " << Hit << " Percentage: " << Correct << endl;
+        FoldResults[fold_cont][0] = Hit;
+        FoldResults[fold_cont][1] = Correct;
+        FoldResults[fold_cont][2] = nHit;
+        FoldResults[fold_cont][3] = Incorrect;
+        TAverage += Correct;
         current_row += fold_size;
         fold_cont++;
     }
+    TAverage = (float)TAverage / FOLDS;
+    TError = (float)100 - TAverage;
+    cout << "Total Average: " << TAverage << " Error: " << TError << endl;
+    save_results(FoldResults);
     return 0;
 }
 
@@ -557,15 +579,15 @@ int select_K(float **mDistances, float sClass, int gSize) {
             }
         }
         //results[cont++] = success;
-        impact = logf(Kmin);
+        impact = log10(Kmin);
         sAccuracy = (float) success / Kmin;
-        sTolerance = (float) (success - 1) / Kmin;
-        weight = impact * sAccuracy + impact * sTolerance;
-
-        impact = round(impact * 100.0) / 100.0;
-        weight = round(weight * 100.0) / 100.0;
         sAccuracy = round(sAccuracy * 100.0) / 100.0;
+        sTolerance = (float) (success - 1) / Kmin;
         sTolerance = round(sTolerance * 100.0) / 100.0;
+        //weight = impact * sAccuracy + impact * sTolerance;
+        weight = sAccuracy * sTolerance + (1 / impact) / 100;
+        impact = round(impact * 100.0) / 100.0;
+        //weight = round(weight * 100.0) / 100.0;        
         cout << "[" << Kmin << "]" << "\t"
                 " Success: " << success << "\t"
                 " Accuracy: " << sAccuracy << "\t"
@@ -754,7 +776,6 @@ void getTraining(float **Dataset, float **Training, oData Features, int Start) {
     int Rows = Features.nFold * 10;
     int Cols = Features.nFeatures;
     int trow = -1;
-    //cout << "Size: " << Rows << " Start: " << Start << " End: " << End << endl;
     int row = 0;
     while (row < Rows) {
         if (row == Start) {
@@ -767,9 +788,6 @@ void getTraining(float **Dataset, float **Training, oData Features, int Start) {
             row++;
         }
     }
-    //cout << "Row reached: " << row << " Rows counted: " << trow << endl;
-    //Rows = Rows - Features.nFold;
-    //show_data(Training, Rows, Cols, 3);
 }
 
 int KNN(float **Training, float **Classes, float *vFold, oData Features, int K) {
@@ -809,8 +827,18 @@ int KNN(float **Training, float **Classes, float *vFold, oData Features, int K) 
             oClass = current_class;
         }
     }
-    cout << "K: " << K << endl;
-    cout << "Class: " << oClass << " Occurrence: " << maxOcurr << endl;
+    cout << "Target: " << vFold[Cols - 1] << " K: " << K << endl;
+    cout << "Reached: " << oClass << " Occurrence: " << maxOcurr << endl;
     show_instances(vClass, total_classes, 2);
+    cout << endl;
     return oClass;
+}
+
+void save_results(float **Averages) {
+    ofstream file;
+    file.open(TFFILE, ios::out);
+    for (int i = 0; i < FOLDS; i++) {
+        file << Averages[i][1] << endl;
+    }
+    file.close();
 }
